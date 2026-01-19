@@ -64,18 +64,45 @@ export async function runAudit(
 // ============================================
 
 function countSyllables(word: string): number {
-  word = word.toLowerCase().replace(/[^a-z]/g, '');
-  if (word.length <= 3) return 1;
-  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
-  const syllables = word.match(/[aeiouy]{1,2}/g);
-  return syllables ? syllables.length : 1;
+  word = word.toLowerCase();
+
+  // Georgian vowels: ა, ე, ი, ო, უ
+  const georgianVowels = word.match(/[აეიოუ]/g);
+  if (georgianVowels && georgianVowels.length > 0) {
+    // For Georgian text, count vowel groups
+    return Math.max(1, georgianVowels.length);
+  }
+
+  // English syllable counting
+  const englishWord = word.replace(/[^a-z]/g, '');
+  if (englishWord.length <= 3) return 1;
+  const cleaned = englishWord.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
+  const syllables = cleaned.match(/[aeiouy]{1,2}/g);
+  return syllables ? Math.max(1, syllables.length) : 1;
 }
 
 function calculateReadability(text: string): ReadabilityData {
-  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
-  const words = text.split(/\s+/).filter((w) => w.length > 0);
-  const totalWords = words.length;
+  // Clean the text - remove extra whitespace and non-content
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+
+  // Split sentences - handle Georgian and English punctuation
+  const sentences = cleanText.split(/[.!?։।]+/).filter((s) => s.trim().length > 10);
   const totalSentences = Math.max(sentences.length, 1);
+
+  // Get words - filter out very short tokens
+  const words = cleanText.split(/\s+/).filter((w) => w.replace(/[^\p{L}]/gu, '').length >= 2);
+  const totalWords = words.length;
+
+  if (totalWords < 10) {
+    // Not enough content for meaningful analysis
+    return {
+      fleschScore: 0,
+      fleschGrade: 'არასაკმარისი კონტენტი',
+      avgSentenceLength: 0,
+      avgSyllablesPerWord: 0,
+      complexWordPercentage: 0
+    };
+  }
 
   let totalSyllables = 0, complexWords = 0;
   words.forEach((word) => {
@@ -87,7 +114,13 @@ function calculateReadability(text: string): ReadabilityData {
   const avgSentenceLength = totalWords / totalSentences;
   const avgSyllablesPerWord = totalWords > 0 ? totalSyllables / totalWords : 0;
   const complexWordPercentage = totalWords > 0 ? (complexWords / totalWords) * 100 : 0;
-  const fleschScore = Math.max(0, Math.min(100, 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord));
+
+  // Flesch Reading Ease formula
+  // Score 90-100: Very Easy, 0-30: Very Difficult
+  let fleschScore = 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord;
+
+  // Clamp to 0-100 range
+  fleschScore = Math.max(0, Math.min(100, fleschScore));
 
   let fleschGrade: string;
   if (fleschScore >= 90) fleschGrade = 'ძალიან მარტივი (5 კლასი)';
@@ -98,7 +131,13 @@ function calculateReadability(text: string): ReadabilityData {
   else if (fleschScore >= 30) fleschGrade = 'რთული (კოლეჯი)';
   else fleschGrade = 'ძალიან რთული (უნივერსიტეტი)';
 
-  return { fleschScore: Math.round(fleschScore * 10) / 10, fleschGrade, avgSentenceLength: Math.round(avgSentenceLength * 10) / 10, avgSyllablesPerWord: Math.round(avgSyllablesPerWord * 100) / 100, complexWordPercentage: Math.round(complexWordPercentage * 10) / 10 };
+  return {
+    fleschScore: Math.round(fleschScore * 10) / 10,
+    fleschGrade,
+    avgSentenceLength: Math.round(avgSentenceLength * 10) / 10,
+    avgSyllablesPerWord: Math.round(avgSyllablesPerWord * 100) / 100,
+    complexWordPercentage: Math.round(complexWordPercentage * 10) / 10
+  };
 }
 
 // ============================================
