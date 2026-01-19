@@ -281,6 +281,28 @@ function analyzeInternational(doc: Document, sourceUrl: string, canonicalHref: s
 // CONTENT ANALYSIS
 // ============================================
 
+function getReadableText(doc: Document): string {
+  // Clone body to avoid modifying original
+  const clone = doc.body?.cloneNode(true) as HTMLElement;
+  if (!clone) return '';
+
+  // Remove non-content elements
+  const removeSelectors = ['script', 'style', 'noscript', 'template', 'svg', 'code', 'pre', 'iframe', '[hidden]', '[aria-hidden="true"]'];
+  removeSelectors.forEach(sel => {
+    clone.querySelectorAll(sel).forEach(el => el.remove());
+  });
+
+  // Get text and clean it
+  let text = clone.textContent || '';
+  // Remove excessive whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  // Remove common non-content patterns
+  text = text.replace(/\{[^}]*\}/g, ''); // Remove JSON-like content
+  text = text.replace(/function\s*\([^)]*\)/g, ''); // Remove function signatures
+
+  return text;
+}
+
 function analyzeContent(doc: Document, htmlLower: string, title: string) {
   const headings = {
     h1: Array.from(doc.querySelectorAll('h1')).map((h) => h.textContent?.trim() || ''),
@@ -291,7 +313,8 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
     h6: Array.from(doc.querySelectorAll('h6')).map((h) => h.textContent?.trim() || ''),
   };
 
-  const bodyText = doc.body?.textContent?.trim() || '';
+  // Get clean readable text (excluding scripts, styles, etc.)
+  const bodyText = getReadableText(doc);
   const words = bodyText.split(/\s+/).filter((w) => w.length > 0);
   const wordCount = words.length;
   const characterCount = bodyText.length;
