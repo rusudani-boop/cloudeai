@@ -16,135 +16,32 @@ interface AuditIssue {
   details?: string;
 }
 
-interface HreflangTag {
-  hreflang: string;
-  href: string;
-}
-
-interface SchemaItem {
-  index: string;
-  type: string;
-  valid: boolean;
-  issues: string[];
-}
+interface HreflangTag { hreflang: string; href: string; }
+interface SchemaItem { index: string; type: string; valid: boolean; issues: string[]; }
+interface KeywordDensity { word: string; count: number; percentage: number; }
+interface ReadabilityData { fleschScore: number; fleschGrade: string; avgSentenceLength: number; avgSyllablesPerWord: number; complexWordPercentage: number; }
+interface AriaData { landmarks: { main: number; nav: number; header: number; footer: number; aside: number; search: number; form: number; region: number }; ariaLabels: number; ariaDescribedby: number; ariaLabelledby: number; ariaHidden: number; ariaLive: number; ariaExpanded: number; roles: string[]; missingLandmarks: string[]; }
+interface DOMData { totalElements: number; maxDepth: number; averageDepth: number; totalNodes: number; textNodes: number; commentNodes: number; inlineStyles: number; inlineScripts: number; emptyElements: number; deprecatedElements: string[]; duplicateIds: string[]; elementCounts: Record<string, number>; }
 
 interface AuditResult {
   url: string;
   score: number;
   timestamp: string;
   fetchMethod: 'url' | 'html';
-  summary: {
-    criticalIssues: number;
-    highIssues: number;
-    mediumIssues: number;
-    lowIssues: number;
-    totalChecks: number;
-    passedChecks: number;
-  };
-  technical: {
-    title: { value: string; length: number; isOptimal: boolean };
-    metaDesc: { value: string; length: number; isOptimal: boolean };
-    canonical: { href: string | null; count: number; isCrossDomain: boolean };
-    robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean };
-    robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean };
-    sitemap: { found: boolean; url: string | null };
-    language: string | null;
-    charset: string | null;
-    viewport: { content: string | null; isMobileOptimized: boolean };
-    favicon: boolean;
-    appleTouchIcon: boolean;
-  };
-  international: {
-    hreflangs: HreflangTag[];
-    hasXDefault: boolean;
-    hasSelfReference: boolean;
-    issues: string[];
-  };
-  content: {
-    headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] };
-    wordCount: number;
-    readingTime: number;
-    titleH1Duplicate: boolean;
-    duplicateParagraphs: number;
-    aiScore: number;
-    aiPhrases: string[];
-  };
-  links: {
-    total: number;
-    internal: number;
-    external: number;
-    broken: number;
-    brokenList: { href: string; text: string }[];
-    genericAnchors: number;
-    genericAnchorsList: { text: string; href: string }[];
-    nofollow: number;
-    unsafeExternalCount: number;
-  };
-  images: {
-    total: number;
-    withoutAlt: number;
-    withoutDimensions: number;
-    lazyLoaded: number;
-    lazyAboveFold: number;
-    clickableWithoutAlt: number;
-  };
-  schema: {
-    count: number;
-    types: string[];
-    valid: number;
-    invalid: number;
-    details: SchemaItem[];
-    missingContext: number;
-  };
-  social: {
-    og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null };
-    twitter: { card: string | null; title: string | null; description: string | null; image: string | null };
-    isComplete: boolean;
-  };
-  accessibility: {
-    buttonsWithoutLabel: number;
-    inputsWithoutLabel: number;
-    linksWithoutText: number;
-    iframesWithoutTitle: number;
-    skippedHeadings: string[];
-    hasSkipLink: boolean;
-    hasLangAttribute: boolean;
-    clickableImagesWithoutAlt: number;
-    positiveTabindex: number;
-  };
-  performance: {
-    totalScripts: number;
-    totalStylesheets: number;
-    renderBlockingScripts: number;
-    renderBlockingStyles: number;
-    preloads: number;
-    preloadsWithoutAs: number;
-    preconnects: number;
-    prefetches: number;
-    dnsPrefetches: number;
-    fontsWithoutDisplay: number;
-  };
-  security: {
-    isHttps: boolean;
-    mixedContentCount: number;
-    mixedContentUrls: string[];
-    protocolRelativeCount: number;
-    unsafeExternalLinks: number;
-  };
-  platform: {
-    cms: string[];
-    frameworks: string[];
-    renderMethod: string;
-    isCSR: boolean;
-  };
-  trustSignals: {
-    hasAboutPage: boolean;
-    hasContactPage: boolean;
-    hasPrivacyPage: boolean;
-    hasAuthor: boolean;
-    socialLinksCount: number;
-    socialPlatforms: string[];
-  };
+  summary: { criticalIssues: number; highIssues: number; mediumIssues: number; lowIssues: number; totalChecks: number; passedChecks: number; };
+  technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null }; llmsTxt: { found: boolean; mentioned: boolean }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
+  international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; };
+  content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; };
+  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; };
+  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; };
+  schema: { count: number; types: string[]; valid: number; invalid: number; details: SchemaItem[]; missingContext: number; hasWebSiteSearch: boolean; hasBreadcrumb: boolean; hasOrganization: boolean; hasFAQ: boolean; hasHowTo: boolean; };
+  social: { og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null; siteName: string | null; locale: string | null }; twitter: { card: string | null; site: string | null; creator: string | null; title: string | null; description: string | null; image: string | null }; isComplete: boolean; hasArticleTags: boolean; };
+  accessibility: { buttonsWithoutLabel: number; inputsWithoutLabel: number; linksWithoutText: number; iframesWithoutTitle: number; skippedHeadings: string[]; hasSkipLink: boolean; hasLangAttribute: boolean; clickableImagesWithoutAlt: number; positiveTabindex: number; hasMainLandmark: boolean; hasNavLandmark: boolean; hasFocusVisible: boolean; colorContrastIssues: number; aria: AriaData; tablesWithoutHeaders: number; autoplayMedia: number; };
+  dom: DOMData;
+  performance: { totalScripts: number; totalStylesheets: number; renderBlockingScripts: number; renderBlockingStyles: number; asyncScripts: number; deferScripts: number; moduleScripts: number; inlineScripts: number; inlineStyles: number; preloads: number; preloadsWithoutAs: number; preconnects: number; prefetches: number; dnsPrefetches: number; fontsWithoutDisplay: number; webFonts: number; criticalCssInlined: boolean; hasServiceWorker: boolean; htmlSize: number; estimatedWeight: string; };
+  security: { isHttps: boolean; mixedContentCount: number; mixedContentUrls: string[]; protocolRelativeCount: number; unsafeExternalLinks: number; hasCSP: boolean; hasXFrameOptions: boolean; hasXContentTypeOptions: boolean; hasReferrerPolicy: boolean; hasCORS: boolean; formWithoutAction: number; passwordFieldWithoutAutocomplete: number; };
+  platform: { cms: string[]; frameworks: string[]; analytics: string[]; advertising: string[]; renderMethod: string; isCSR: boolean; isPWA: boolean; hasAMP: boolean; };
+  trustSignals: { hasAboutPage: boolean; hasContactPage: boolean; hasPrivacyPage: boolean; hasTermsPage: boolean; hasCookiePolicy: boolean; hasAuthor: boolean; hasPublishDate: boolean; hasModifiedDate: boolean; hasCopyright: boolean; hasAddress: boolean; hasPhone: boolean; hasEmail: boolean; socialLinksCount: number; socialPlatforms: string[]; hasSSLBadge: boolean; hasPaymentBadges: boolean; hasReviews: boolean; hasCertifications: boolean; };
   issues: AuditIssue[];
   passed: string[];
 }
@@ -171,7 +68,75 @@ const Icons = {
   Eye: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
   Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
   Brain: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
+  Accessibility: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
+  DOM: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>,
+  Chart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
 };
+
+// Chart Components
+const DonutChart = ({ value, size = 120, strokeWidth = 10, color }: { value: number; size?: number; strokeWidth?: number; color: string }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (value / 100) * circumference;
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000" />
+    </svg>
+  );
+};
+
+const BarChart = ({ data, maxValue }: { data: { label: string; value: number; color: string }[]; maxValue?: number }) => {
+  const max = maxValue || Math.max(...data.map(d => d.value), 1);
+  return (
+    <div className="space-y-2">
+      {data.map((item, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="w-20 text-sm text-gray-600 truncate">{item.label}</div>
+          <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(item.value / max) * 100}%`, backgroundColor: item.color }} />
+          </div>
+          <div className="w-10 text-sm font-medium text-right">{item.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const PieChart = ({ data, size = 120 }: { data: { label: string; value: number; color: string }[]; size?: number }) => {
+  const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
+  let currentAngle = 0;
+  const segments = data.map(d => {
+    const angle = (d.value / total) * 360;
+    const startAngle = currentAngle;
+    currentAngle += angle;
+    return { ...d, startAngle, angle };
+  });
+
+  const describeArc = (startAngle: number, endAngle: number, radius: number) => {
+    const start = { x: size / 2 + radius * Math.cos((Math.PI * startAngle) / 180), y: size / 2 + radius * Math.sin((Math.PI * startAngle) / 180) };
+    const end = { x: size / 2 + radius * Math.cos((Math.PI * endAngle) / 180), y: size / 2 + radius * Math.sin((Math.PI * endAngle) / 180) };
+    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+    return `M ${size / 2} ${size / 2} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y} Z`;
+  };
+
+  return (
+    <svg width={size} height={size}>
+      {segments.map((seg, i) => seg.value > 0 && (
+        <path key={i} d={describeArc(seg.startAngle - 90, seg.startAngle + seg.angle - 90, size / 2 - 5)} fill={seg.color} className="transition-all duration-500" />
+      ))}
+    </svg>
+  );
+};
+
+const HorizontalBar = ({ value, max, color, label }: { value: number; max: number; color: string; label: string }) => (
+  <div className="space-y-1">
+    <div className="flex justify-between text-sm"><span className="text-gray-600">{label}</span><span className="font-medium">{value}</span></div>
+    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((value / max) * 100, 100)}%`, backgroundColor: color }} />
+    </div>
+  </div>
+);
 
 export default function SEOChecker() {
   const [url, setUrl] = useState('');
@@ -183,28 +148,22 @@ export default function SEOChecker() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isDragging, setIsDragging] = useState(false);
 
+  // All sections to open by default
+  const allSections = ['overview', 'issues', 'passed', 'technical', 'content', 'security', 'international', 'links', 'images', 'schema', 'social', 'platform', 'accessibility', 'dom', 'performance', 'ai', 'trust'];
+
   const handleAnalyze = async () => {
     setError('');
     setResults(null);
     setLoading(true);
-
     try {
-      const res = await fetch('/api/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inputMode === 'url' ? { url } : { html: htmlInput, url }),
-      });
-
+      const res = await fetch('/api/audit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inputMode === 'url' ? { url } : { html: htmlInput, url }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'აუდიტი ვერ შესრულდა');
-
       setResults(data);
-      setExpanded({ issues: true, passed: true, technical: true });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'შეცდომა მოხდა');
-    } finally {
-      setLoading(false);
-    }
+      // Open all sections by default
+      setExpanded(allSections.reduce((acc, s) => ({ ...acc, [s]: true }), {}));
+    } catch (e) { setError(e instanceof Error ? e.message : 'შეცდომა მოხდა'); }
+    finally { setLoading(false); }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -234,401 +193,599 @@ export default function SEOChecker() {
     }
   };
 
-  const getScoreBg = (s: number) => s >= 90 ? 'from-green-500 to-emerald-600' : s >= 70 ? 'from-yellow-500 to-amber-600' : s >= 50 ? 'from-orange-500 to-orange-600' : 'from-red-500 to-red-600';
+  const getScoreColor = (s: number) => s >= 90 ? '#10b981' : s >= 70 ? '#f59e0b' : s >= 50 ? '#f97316' : '#ef4444';
+  const getSeverityStyle = (sev: string) => ({ critical: 'bg-red-100 text-red-800 border-red-200', high: 'bg-orange-100 text-orange-800 border-orange-200', medium: 'bg-yellow-100 text-yellow-800 border-yellow-200', low: 'bg-blue-100 text-blue-800 border-blue-200' }[sev] || 'bg-gray-100');
+  const getSeverityLabel = (sev: string) => ({ critical: 'კრიტიკული', high: 'მაღალი', medium: 'საშუალო', low: 'დაბალი' }[sev] || sev);
 
-  const getSeverityStyle = (sev: string) => {
-    switch (sev) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-blue-100 text-blue-800 border-blue-200';
-    }
-  };
-
-  const getSeverityLabel = (sev: string) => {
-    switch (sev) {
-      case 'critical': return 'კრიტიკული';
-      case 'high': return 'მაღალი';
-      case 'medium': return 'საშუალო';
-      default: return 'დაბალი';
-    }
-  };
-
-  const Section = ({ title, icon: Icon, id, children, badge }: { title: string; icon: React.FC; id: string; children: React.ReactNode; badge?: React.ReactNode }) => (
+  const Section = ({ title, icon: Icon, id, children, badge, defaultOpen = true }: { title: string; icon: React.FC; id: string; children: React.ReactNode; badge?: React.ReactNode; defaultOpen?: boolean }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    <button onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50">
-    <div className="flex items-center gap-3"><Icon /><span className="font-semibold text-gray-800">{title}</span>{badge}</div>
-    {expanded[id] ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
-    </button>
-    {expanded[id] && <div className="px-5 pb-5 border-t border-gray-100">{children}</div>}
+      <button onClick={() => setExpanded(s => ({ ...s, [id]: !s[id] }))} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50">
+        <div className="flex items-center gap-3"><Icon /><span className="font-semibold text-gray-800">{title}</span>{badge}</div>
+        {expanded[id] ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+      </button>
+      {expanded[id] && <div className="px-5 pb-5 border-t border-gray-100">{children}</div>}
     </div>
   );
 
   const CheckBadge = ({ ok, label }: { ok: boolean; label: string }) => (
     <div className={`flex items-center gap-1.5 text-sm ${ok ? 'text-green-700' : 'text-red-700'}`}>
-    {ok ? <Icons.Check /> : <Icons.Alert />} {label}
+      {ok ? <Icons.Check /> : <Icons.Alert />} {label}
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-    {/* Header */}
-    <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-    <div className="max-w-6xl mx-auto px-6 py-8">
-    <h1 className="text-3xl font-bold">SEO აუდიტი</h1>
-    <p className="text-emerald-100 mt-1">ვებგვერდის SEO ანალიზი • 50+ შემოწმება</p>
-    </div>
-    </div>
-
-    <div className="max-w-6xl mx-auto px-6 py-8">
-    {/* Input */}
-    <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-    <div className="flex gap-3 mb-5">
-    <button onClick={() => { setInputMode('url'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'url' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-    <Icons.Globe /> URL-ით
-    </button>
-    <button onClick={() => { setInputMode('html'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'html' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-    <Icons.Code /> HTML ჩასმა
-    </button>
-    </div>
-
-    {inputMode === 'url' ? (
-      <div>
-      <div className="flex gap-3">
-      <div className="flex-1 relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Globe /></div>
-      <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()} />
-      </div>
-      <button onClick={handleAnalyze} disabled={loading || !url} className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
-      {loading ? <Icons.Loader /> : <Icons.Search />} ანალიზი
-      </button>
-      </div>
-      <p className="text-sm text-gray-500 mt-3">💡 თუ საიტი დაცულია Cloudflare-ით, გამოიყენეთ &quot;HTML ჩასმა&quot; რეჟიმი</p>
-      </div>
-    ) : (
-      <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
-      <div className="flex gap-3 mb-3">
-      <div className="flex-1 relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Globe /></div>
-      <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="URL (არასავალდებულო)" className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 outline-none" />
-      </div>
-      </div>
-      <textarea value={htmlInput} onChange={(e) => setHtmlInput(e.target.value)} placeholder={`ჩასვით HTML კოდი აქ...\n\nროგორ მივიღოთ HTML:\n1. გახსენით გვერდი ბრაუზერში\n2. დააჭირეთ Ctrl+U (Windows) ან Cmd+Option+U (Mac)\n3. აირჩიეთ ყველა (Ctrl+A) და დააკოპირეთ (Ctrl+C)\n4. ჩასვით აქ\n\n💡 ან გადმოიტანეთ HTML ფაილი აქ`} className={`w-full h-48 px-4 py-3 border-2 rounded-xl font-mono text-sm resize-none ${isDragging ? 'border-emerald-500 bg-emerald-50 border-dashed' : 'border-gray-200'}`} />
-      <div className="flex justify-between items-center mt-4">
-      <span className="text-sm text-gray-500">{htmlInput ? `${htmlInput.length.toLocaleString()} სიმბოლო` : ''}</span>
-      <button onClick={handleAnalyze} disabled={loading || !htmlInput} className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
-      {loading ? <Icons.Loader /> : <Icons.Search />} ანალიზი
-      </button>
-      </div>
-      </div>
-    )}
-
-    {error && (
-      <div className="mt-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-      <span className="text-red-600"><Icons.Alert /></span>
-      <span className="text-red-700">{error}</span>
-      </div>
-    )}
-    </div>
-
-    {/* Results */}
-    {results && (
-      <div className="space-y-6">
-      {/* Score */}
-      <div className="bg-white rounded-2xl shadow-xl p-6">
-      <div className="flex flex-col md:flex-row items-center gap-6">
-      <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${getScoreBg(results.score)} flex items-center justify-center shadow-lg`}>
-      <div className="text-center">
-      <div className="text-4xl font-bold text-white">{results.score}</div>
-      <div className="text-white/80 text-sm">/ 100</div>
-      </div>
-      </div>
-      <div className="flex-1 text-center md:text-left">
-      <h2 className="text-xl font-bold text-gray-900 break-all">{results.url}</h2>
-      <div className="flex flex-wrap gap-3 mt-3 justify-center md:justify-start">
-      {results.summary.criticalIssues > 0 && <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">{results.summary.criticalIssues} კრიტიკული</span>}
-      {results.summary.highIssues > 0 && <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">{results.summary.highIssues} მაღალი</span>}
-      {results.summary.mediumIssues > 0 && <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">{results.summary.mediumIssues} საშუალო</span>}
-      {results.summary.lowIssues > 0 && <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{results.summary.lowIssues} დაბალი</span>}
-      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">{results.summary.passedChecks} წარმატებული</span>
-      </div>
-      </div>
-      <div className="flex gap-2">
-      <button onClick={() => exportData('json')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> JSON</button>
-      <button onClick={() => exportData('csv')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> CSV</button>
-      </div>
-      </div>
-      </div>
-
-      {/* Issues */}
-      <Section title="ნაპოვნი პრობლემები" icon={Icons.Alert} id="issues" badge={<span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-sm">{results.issues.length}</span>}>
-      <div className="space-y-3 mt-4">
-      {results.issues.map((issue, i) => (
-        <div key={i} className={`p-4 rounded-lg border ${getSeverityStyle(issue.severity)}`}>
-        <div className="flex items-start justify-between gap-4">
-        <div>
-        <div className="font-medium">{issue.issueGe}</div>
-        <div className="text-sm mt-1 opacity-80"><code className="bg-white/50 px-1 rounded">{issue.location}</code></div>
-        {issue.current && <div className="text-xs mt-1 opacity-70 truncate max-w-md">მიმდინარე: {issue.current}</div>}
+      {/* Header */}
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <h1 className="text-3xl font-bold">SEO აუდიტი</h1>
+          <p className="text-emerald-100 mt-1">ვებგვერდის SEO ანალიზი • {results ? `${results.summary.totalChecks} შემოწმება შესრულდა` : '75+ შემოწმება'}</p>
         </div>
-        <span className="text-xs font-medium px-2 py-1 rounded bg-white/50 whitespace-nowrap">{getSeverityLabel(issue.severity)}</span>
-        </div>
-        <div className="text-sm mt-2 opacity-90"><strong>გამოსწორება:</strong> {issue.fixGe}</div>
-        </div>
-      ))}
       </div>
-      </Section>
 
-      {/* Passed */}
-      <Section title="წარმატებული შემოწმებები" icon={Icons.Check} id="passed" badge={<span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-sm">{results.passed.length}</span>}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-      {results.passed.map((p, i) => (
-        <div key={i} className="flex items-center gap-2 text-green-700 bg-green-50 px-3 py-2 rounded-lg text-sm"><Icons.Check /> {p}</div>
-      ))}
-      </div>
-      </Section>
-
-      {/* Technical */}
-      <Section title="ტექნიკური დეტალები" icon={Icons.Shield} id="technical">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="text-sm text-gray-500 mb-1">სათაური (Title)</div>
-      <div className="font-medium text-sm">{results.technical.title.value || '—'}</div>
-      <div className="text-sm text-gray-500 mt-1">{results.technical.title.length} სიმბოლო {results.technical.title.isOptimal && <span className="text-green-600">✓</span>}</div>
-      </div>
-      <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="text-sm text-gray-500 mb-1">მეტა აღწერა</div>
-      <div className="font-medium text-sm">{results.technical.metaDesc.value?.substring(0, 80) || '—'}{results.technical.metaDesc.value && results.technical.metaDesc.value.length > 80 ? '...' : ''}</div>
-      <div className="text-sm text-gray-500 mt-1">{results.technical.metaDesc.length} სიმბოლო {results.technical.metaDesc.isOptimal && <span className="text-green-600">✓</span>}</div>
-      </div>
-      <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="text-sm text-gray-500 mb-1">H1 სათაური</div>
-      <div className="font-medium text-sm">{results.content.headings.h1[0] || '—'}</div>
-      <div className="text-sm text-gray-500 mt-1">{results.content.headings.h1.length} H1 {results.content.titleH1Duplicate && <span className="text-yellow-600">⚠ Title-თან იდენტური</span>}</div>
-      </div>
-      <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="text-sm text-gray-500 mb-1">სიტყვების რაოდენობა</div>
-      <div className="font-medium">{results.content.wordCount.toLocaleString()}</div>
-      <div className="text-sm text-gray-500 mt-1">~{results.content.readingTime} წთ კითხვა</div>
-      </div>
-      </div>
-      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-      <div className="text-sm font-medium text-gray-700 mb-3">ტექნიკური შემოწმებები</div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <CheckBadge ok={!!results.technical.viewport.isMobileOptimized} label="Viewport" />
-      <CheckBadge ok={!!results.technical.charset} label="Charset" />
-      <CheckBadge ok={!!results.technical.language} label={`Lang: ${results.technical.language || '—'}`} />
-      <CheckBadge ok={results.technical.favicon} label="Favicon" />
-      <CheckBadge ok={results.security.isHttps} label="HTTPS" />
-      <CheckBadge ok={!results.technical.robots.hasNoindex} label={results.technical.robots.hasNoindex ? 'NOINDEX!' : 'Indexable'} />
-      <CheckBadge ok={!results.platform.isCSR} label={results.platform.isCSR ? 'CSR' : 'SSR/SSG'} />
-      <CheckBadge ok={results.accessibility.hasSkipLink} label="Skip Link" />
-      </div>
-      </div>
-      </Section>
-
-      {/* Security */}
-      <Section title="უსაფრთხოება" icon={Icons.Lock} id="security">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-      <div className={`text-center p-4 rounded-lg ${results.security.isHttps ? 'bg-green-50' : 'bg-red-50'}`}>
-      <div className={`text-2xl font-bold ${results.security.isHttps ? 'text-green-700' : 'text-red-700'}`}>{results.security.isHttps ? '✓' : '✗'}</div>
-      <div className="text-sm text-gray-600">HTTPS</div>
-      </div>
-      <div className={`text-center p-4 rounded-lg ${results.security.mixedContentCount === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-      <div className={`text-2xl font-bold ${results.security.mixedContentCount === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.security.mixedContentCount}</div>
-      <div className="text-sm text-gray-600">Mixed Content</div>
-      </div>
-      <div className={`text-center p-4 rounded-lg ${results.security.unsafeExternalLinks === 0 ? 'bg-green-50' : 'bg-yellow-50'}`}>
-      <div className={`text-2xl font-bold ${results.security.unsafeExternalLinks === 0 ? 'text-green-700' : 'text-yellow-700'}`}>{results.security.unsafeExternalLinks}</div>
-      <div className="text-sm text-gray-600">Unsafe Links</div>
-      </div>
-      <div className="text-center p-4 bg-gray-50 rounded-lg">
-      <div className="text-2xl font-bold text-gray-700">{results.security.protocolRelativeCount}</div>
-      <div className="text-sm text-gray-600">Protocol-relative</div>
-      </div>
-      </div>
-      {results.security.mixedContentUrls.length > 0 && (
-        <div className="mt-4 p-3 bg-red-50 rounded-lg">
-        <div className="text-sm font-medium text-red-800 mb-2">Mixed Content URLs:</div>
-        <div className="text-xs text-red-700 space-y-1">
-        {results.security.mixedContentUrls.slice(0, 5).map((u, i) => <div key={i} className="truncate">{u}</div>)}
-        </div>
-        </div>
-      )}
-      </Section>
-
-      {/* International / Hreflang */}
-      {results.international.hreflangs.length > 0 && (
-        <Section title="Hreflang / საერთაშორისო" icon={Icons.Languages} id="international" badge={<span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-sm">{results.international.hreflangs.length} ენა</span>}>
-        <div className="mt-4 space-y-2">
-        {results.international.hreflangs.map((h, i) => (
-          <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded text-sm">
-          <span className="font-mono font-semibold text-gray-700 w-20">{h.hreflang}</span>
-          <span className="text-gray-600 truncate flex-1">{h.href}</span>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Input */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+          <div className="flex gap-3 mb-5">
+            <button onClick={() => { setInputMode('url'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'url' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.Globe /> URL-ით</button>
+            <button onClick={() => { setInputMode('html'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'html' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.Code /> HTML ჩასმა</button>
           </div>
-        ))}
+
+          {inputMode === 'url' ? (
+            <div>
+              <div className="flex gap-3">
+                <div className="flex-1 relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Globe /></div>
+                  <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()} />
+                </div>
+                <button onClick={handleAnalyze} disabled={loading || !url} className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">{loading ? <Icons.Loader /> : <Icons.Search />} ანალიზი</button>
+              </div>
+              <p className="text-sm text-gray-500 mt-3">💡 თუ საიტი დაცულია Cloudflare-ით, გამოიყენეთ &quot;HTML ჩასმა&quot; რეჟიმი</p>
+            </div>
+          ) : (
+            <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
+              <div className="flex gap-3 mb-3">
+                <div className="flex-1 relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Globe /></div>
+                  <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="URL (არასავალდებულო)" className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 outline-none" />
+                </div>
+              </div>
+              <textarea value={htmlInput} onChange={(e) => setHtmlInput(e.target.value)} placeholder={`ჩასვით HTML კოდი აქ...\n\nროგორ მივიღოთ HTML:\n1. გახსენით გვერდი ბრაუზერში\n2. დააჭირეთ Ctrl+U (Windows) ან Cmd+Option+U (Mac)\n3. აირჩიეთ ყველა (Ctrl+A) და დააკოპირეთ (Ctrl+C)\n4. ჩასვით აქ\n\n💡 ან გადმოიტანეთ HTML ფაილი აქ`} className={`w-full h-48 px-4 py-3 border-2 rounded-xl font-mono text-sm resize-none ${isDragging ? 'border-emerald-500 bg-emerald-50 border-dashed' : 'border-gray-200'}`} />
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-sm text-gray-500">{htmlInput ? `${htmlInput.length.toLocaleString()} სიმბოლო` : ''}</span>
+                <button onClick={handleAnalyze} disabled={loading || !htmlInput} className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">{loading ? <Icons.Loader /> : <Icons.Search />} ანალიზი</button>
+              </div>
+            </div>
+          )}
+
+          {error && <div className="mt-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3"><span className="text-red-600"><Icons.Alert /></span><span className="text-red-700">{error}</span></div>}
         </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-        <CheckBadge ok={results.international.hasXDefault} label="x-default" />
-        <CheckBadge ok={results.international.hasSelfReference} label="Self-reference" />
-        </div>
-        {results.international.issues.length > 0 && (
-          <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
-          <div className="text-sm font-medium text-yellow-800 mb-1">პრობლემები:</div>
-          <ul className="text-sm text-yellow-700 list-disc list-inside">
-          {results.international.issues.map((issue, i) => <li key={i}>{issue}</li>)}
-          </ul>
+
+        {/* Results */}
+        {results && (
+          <div className="space-y-6">
+            {/* Score Overview with Charts */}
+            <Section title="მთავარი მიმოხილვა" icon={Icons.Chart} id="overview">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+                {/* Score Donut */}
+                <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl">
+                  <div className="relative">
+                    <DonutChart value={results.score} size={140} strokeWidth={12} color={getScoreColor(results.score)} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-4xl font-bold" style={{ color: getScoreColor(results.score) }}>{results.score}</div>
+                        <div className="text-gray-500 text-sm">/ 100</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-center">
+                    <div className="font-semibold text-gray-800">{results.score >= 90 ? 'შესანიშნავი!' : results.score >= 70 ? 'კარგი' : results.score >= 50 ? 'საშუალო' : 'საჭიროებს გაუმჯობესებას'}</div>
+                    <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">{results.url}</div>
+                  </div>
+                </div>
+
+                {/* Issues Bar Chart */}
+                <div className="p-6 bg-gray-50 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-4">პრობლემები სერიოზულობით</h3>
+                  <BarChart data={[
+                    { label: 'კრიტიკული', value: results.summary.criticalIssues, color: '#ef4444' },
+                    { label: 'მაღალი', value: results.summary.highIssues, color: '#f97316' },
+                    { label: 'საშუალო', value: results.summary.mediumIssues, color: '#eab308' },
+                    { label: 'დაბალი', value: results.summary.lowIssues, color: '#3b82f6' },
+                  ]} />
+                </div>
+
+                {/* Links Pie Chart */}
+                <div className="p-6 bg-gray-50 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-4">ბმულების განაწილება</h3>
+                  <div className="flex items-center justify-center gap-4">
+                    <PieChart data={[
+                      { label: 'შიდა', value: results.links.internal, color: '#10b981' },
+                      { label: 'გარე', value: results.links.external, color: '#8b5cf6' },
+                      { label: 'გატეხილი', value: results.links.broken, color: '#ef4444' },
+                    ]} size={100} />
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span>შიდა: {results.links.internal}</span></div>
+                      <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500" /><span>გარე: {results.links.external}</span></div>
+                      <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500" /><span>გატეხილი: {results.links.broken}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-6">
+                <div className="p-3 bg-slate-50 rounded-lg text-center"><div className="text-2xl font-bold text-slate-700">{results.summary.totalChecks}</div><div className="text-xs text-slate-600">შემოწმება</div></div>
+                <div className="p-3 bg-green-50 rounded-lg text-center"><div className="text-2xl font-bold text-green-700">{results.summary.passedChecks}</div><div className="text-xs text-green-600">წარმატებული</div></div>
+                <div className="p-3 bg-red-50 rounded-lg text-center"><div className="text-2xl font-bold text-red-700">{results.issues.length}</div><div className="text-xs text-red-600">პრობლემა</div></div>
+                <div className="p-3 bg-blue-50 rounded-lg text-center"><div className="text-2xl font-bold text-blue-700">{results.content.wordCount}</div><div className="text-xs text-blue-600">სიტყვა</div></div>
+                <div className="p-3 bg-purple-50 rounded-lg text-center"><div className="text-2xl font-bold text-purple-700">{results.images.total}</div><div className="text-xs text-purple-600">სურათი</div></div>
+                <div className="p-3 bg-amber-50 rounded-lg text-center"><div className="text-2xl font-bold text-amber-700">{results.schema.count}</div><div className="text-xs text-amber-600">Schema</div></div>
+                <div className="p-3 bg-teal-50 rounded-lg text-center"><div className="text-2xl font-bold text-teal-700">{(results.content.readability?.fleschScore || 0).toFixed(1)}</div><div className="text-xs text-teal-600">Flesch Score</div></div>
+              </div>
+
+              {/* Export Buttons */}
+              <div className="flex gap-2 mt-6">
+                <button onClick={() => exportData('json')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> JSON ექსპორტი</button>
+                <button onClick={() => exportData('csv')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> CSV ექსპორტი</button>
+              </div>
+            </Section>
+
+            {/* Issues */}
+            <Section title="ნაპოვნი პრობლემები" icon={Icons.Alert} id="issues" badge={<span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-sm">{results.issues.length}</span>}>
+              <div className="space-y-3 mt-4">
+                {results.issues.map((issue, i) => (
+                  <div key={i} className={`p-4 rounded-lg border ${getSeverityStyle(issue.severity)}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="font-medium">{issue.issueGe}</div>
+                        <div className="text-sm mt-1 opacity-80"><code className="bg-white/50 px-1 rounded">{issue.location}</code></div>
+                        {issue.current && <div className="text-xs mt-1 opacity-70 truncate max-w-md">მიმდინარე: {issue.current}</div>}
+                        {issue.details && <div className="text-xs mt-1 opacity-70">{issue.details}</div>}
+
+                        {/* Show broken links list */}
+                        {issue.id === 'broken-links' && results.links.brokenList && results.links.brokenList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">გატეხილი ბმულები:</div>
+                            {results.links.brokenList.map((link: {href: string; text: string}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-red-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
+                                {link.text && <span className="opacity-60 truncate">({link.text})</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show generic anchors list */}
+                        {issue.id === 'generic-anchors' && results.links.genericAnchorsList && results.links.genericAnchorsList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">ზოგადი ანკორები:</div>
+                            {results.links.genericAnchorsList.slice(0, 5).map((link: {text: string; href: string}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-yellow-600">•</span>
+                                <code className="bg-white/50 px-1 rounded">&quot;{link.text}&quot;</code>
+                                <span className="opacity-60 truncate max-w-xs">→ {link.href}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show mixed content URLs */}
+                        {issue.id === 'mixed-content' && results.security.mixedContentUrls && results.security.mixedContentUrls.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">HTTP რესურსები HTTPS გვერდზე:</div>
+                            {results.security.mixedContentUrls.map((url: string, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-red-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-md">{url}</code>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show duplicate IDs */}
+                        {issue.id === 'duplicate-ids' && results.dom.duplicateIds && results.dom.duplicateIds.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">დუბლირებული ID-ები: </span>
+                            {results.dom.duplicateIds.map((id: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">#{id}</code>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show deprecated elements */}
+                        {issue.id === 'deprecated' && results.dom.deprecatedElements && results.dom.deprecatedElements.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">მოძველებული ტეგები: </span>
+                            {results.dom.deprecatedElements.map((el: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">&lt;{el}&gt;</code>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show skipped headings */}
+                        {issue.id === 'skipped-headings' && results.accessibility.skippedHeadings && results.accessibility.skippedHeadings.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">გამოტოვებული: </span>
+                            {results.accessibility.skippedHeadings.map((skip: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">{skip}</code>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show missing landmarks */}
+                        {issue.id === 'missing-landmarks' && results.accessibility.aria?.missingLandmarks && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">აკლია: </span>
+                            {results.accessibility.aria.missingLandmarks.map((lm: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">{lm}</code>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium px-2 py-1 rounded bg-white/50 whitespace-nowrap">{getSeverityLabel(issue.severity)}</span>
+                    </div>
+                    <div className="text-sm mt-2 opacity-90"><strong>გამოსწორება:</strong> {issue.fixGe}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Passed */}
+            <Section title="წარმატებული შემოწმებები" icon={Icons.Check} id="passed" badge={<span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-sm">{results.passed.length}</span>}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-4">
+                {results.passed.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2 text-green-700 bg-green-50 px-3 py-2 rounded-lg text-sm"><Icons.Check /> {p}</div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Content & Readability */}
+            <Section title="კონტენტი და წაკითხვადობა" icon={Icons.FileText} id="content">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                {/* Readability Gauge */}
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <h4 className="font-medium text-gray-700 mb-4">Flesch Reading Score</h4>
+                  <div className="flex items-center gap-6">
+                    <div className="relative">
+                      <DonutChart value={results.content.readability?.fleschScore || 0} size={100} strokeWidth={10} color={results.content.readability?.fleschScore >= 60 ? '#10b981' : results.content.readability?.fleschScore >= 30 ? '#f59e0b' : '#ef4444'} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold">{(results.content.readability?.fleschScore || 0).toFixed(1)}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800">{results.content.readability?.fleschGrade || '—'}</div>
+                      <div className="text-sm text-gray-500 mt-1">საშუალო წინ. სიგრძე: {results.content.readability?.avgSentenceLength || 0}</div>
+                      <div className="text-sm text-gray-500">რთული სიტყვები: {results.content.readability?.complexWordPercentage || 0}%</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Word Stats */}
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <h4 className="font-medium text-gray-700 mb-4">კონტენტის სტატისტიკა</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><div className="text-2xl font-bold text-gray-800">{results.content.wordCount.toLocaleString()}</div><div className="text-sm text-gray-500">სიტყვა</div></div>
+                    <div><div className="text-2xl font-bold text-gray-800">{results.content.sentenceCount || 0}</div><div className="text-sm text-gray-500">წინადადება</div></div>
+                    <div><div className="text-2xl font-bold text-gray-800">{results.content.paragraphCount || 0}</div><div className="text-sm text-gray-500">პარაგრაფი</div></div>
+                    <div><div className="text-2xl font-bold text-gray-800">~{results.content.readingTime}</div><div className="text-sm text-gray-500">წუთი კითხვა</div></div>
+                  </div>
+                </div>
+
+                {/* Keyword Density */}
+                {results.content.keywordDensity && results.content.keywordDensity.length > 0 && (
+                  <div className="p-4 bg-gray-50 rounded-xl lg:col-span-2">
+                    <h4 className="font-medium text-gray-700 mb-4">საკვანძო სიტყვების სიხშირე (Top 10)</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      {results.content.keywordDensity.slice(0, 10).map((kw, i) => (
+                        <div key={i} className="bg-white p-3 rounded-lg text-center">
+                          <div className="font-medium text-gray-800 truncate">{kw.word}</div>
+                          <div className="text-sm text-gray-500">{kw.count}x ({kw.percentage}%)</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Headings */}
+                <div className="p-4 bg-gray-50 rounded-xl lg:col-span-2">
+                  <h4 className="font-medium text-gray-700 mb-4">სათაურების სტრუქტურა</h4>
+                  <BarChart data={[
+                    { label: 'H1', value: results.content.headings.h1.length, color: '#ef4444' },
+                    { label: 'H2', value: results.content.headings.h2.length, color: '#f97316' },
+                    { label: 'H3', value: results.content.headings.h3.length, color: '#eab308' },
+                    { label: 'H4', value: results.content.headings.h4.length, color: '#22c55e' },
+                    { label: 'H5', value: results.content.headings.h5.length, color: '#3b82f6' },
+                    { label: 'H6', value: results.content.headings.h6.length, color: '#8b5cf6' },
+                  ]} />
+                </div>
+              </div>
+            </Section>
+
+            {/* Technical */}
+            <Section title="ტექნიკური დეტალები" icon={Icons.Shield} id="technical">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-500 mb-1">სათაური (Title)</div>
+                  <div className="font-medium text-sm">{results.technical.title.value || '—'}</div>
+                  <HorizontalBar value={results.technical.title.length} max={70} color={results.technical.title.isOptimal ? '#10b981' : '#f59e0b'} label={`${results.technical.title.length}/60 სიმბოლო`} />
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-500 mb-1">მეტა აღწერა</div>
+                  <div className="font-medium text-sm truncate">{results.technical.metaDesc.value?.substring(0, 80) || '—'}</div>
+                  <HorizontalBar value={results.technical.metaDesc.length} max={170} color={results.technical.metaDesc.isOptimal ? '#10b981' : '#f59e0b'} label={`${results.technical.metaDesc.length}/160 სიმბოლო`} />
+                </div>
+              </div>
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm font-medium text-gray-700 mb-3">ტექნიკური შემოწმებები</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <CheckBadge ok={!!results.technical.viewport.isMobileOptimized} label="Viewport" />
+                  <CheckBadge ok={!!results.technical.charset} label="Charset" />
+                  <CheckBadge ok={!!results.technical.language} label={`Lang: ${results.technical.language || '—'}`} />
+                  <CheckBadge ok={results.technical.favicon} label="Favicon" />
+                  <CheckBadge ok={results.security.isHttps} label="HTTPS" />
+                  <CheckBadge ok={!results.technical.robots.hasNoindex} label={results.technical.robots.hasNoindex ? 'NOINDEX!' : 'Indexable'} />
+                  <CheckBadge ok={!results.platform.isCSR} label={results.platform.isCSR ? 'CSR' : 'SSR/SSG'} />
+                  <CheckBadge ok={results.technical.llmsTxt?.found || false} label="llms.txt" />
+                  <CheckBadge ok={results.accessibility.hasSkipLink} label="Skip Link" />
+                  <CheckBadge ok={results.technical.appleTouchIcon} label="Apple Icon" />
+                  <CheckBadge ok={results.technical.manifestJson || false} label="Manifest" />
+                  <CheckBadge ok={!!results.technical.canonical.href} label="Canonical" />
+                </div>
+              </div>
+            </Section>
+
+            {/* DOM Analysis */}
+            {results.dom && (
+              <Section title="DOM ანალიზი" icon={Icons.DOM} id="dom">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <div className={`text-2xl font-bold ${results.dom.totalElements > 1500 ? 'text-red-600' : 'text-gray-800'}`}>{results.dom.totalElements.toLocaleString()}</div>
+                    <div className="text-sm text-gray-500">ელემენტი</div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <div className={`text-2xl font-bold ${results.dom.maxDepth > 32 ? 'text-red-600' : 'text-gray-800'}`}>{results.dom.maxDepth}</div>
+                    <div className="text-sm text-gray-500">მაქს. სიღრმე</div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-gray-800">{results.dom.averageDepth}</div>
+                    <div className="text-sm text-gray-500">საშ. სიღრმე</div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg text-center">
+                    <div className={`text-2xl font-bold ${results.dom.duplicateIds.length > 0 ? 'text-red-600' : 'text-green-600'}`}>{results.dom.duplicateIds.length}</div>
+                    <div className="text-sm text-gray-500">დუბლ. ID</div>
+                  </div>
+                </div>
+                {results.dom.deprecatedElements.length > 0 && (
+                  <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
+                    <div className="text-sm font-medium text-yellow-800">მოძველებული ელემენტები: {results.dom.deprecatedElements.join(', ')}</div>
+                  </div>
+                )}
+              </Section>
+            )}
+
+            {/* Accessibility */}
+            <Section title="ხელმისაწვდომობა (A11y)" icon={Icons.Eye} id="accessibility">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div className={`p-4 rounded-lg text-center ${results.accessibility.buttonsWithoutLabel === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`text-2xl font-bold ${results.accessibility.buttonsWithoutLabel === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.accessibility.buttonsWithoutLabel}</div>
+                  <div className="text-sm text-gray-600">ღილაკი ლეიბლის გარეშე</div>
+                </div>
+                <div className={`p-4 rounded-lg text-center ${results.accessibility.inputsWithoutLabel === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`text-2xl font-bold ${results.accessibility.inputsWithoutLabel === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.accessibility.inputsWithoutLabel}</div>
+                  <div className="text-sm text-gray-600">ველი ლეიბლის გარეშე</div>
+                </div>
+                <div className={`p-4 rounded-lg text-center ${results.accessibility.linksWithoutText === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`text-2xl font-bold ${results.accessibility.linksWithoutText === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.accessibility.linksWithoutText}</div>
+                  <div className="text-sm text-gray-600">ბმული ტექსტის გარეშე</div>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-blue-700">{results.accessibility.aria?.ariaLabels || 0}</div>
+                  <div className="text-sm text-gray-600">ARIA Labels</div>
+                </div>
+              </div>
+              {results.accessibility.aria?.missingLandmarks && results.accessibility.aria.missingLandmarks.length > 0 && (
+                <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
+                  <div className="text-sm font-medium text-yellow-800">აკლია Landmarks: {results.accessibility.aria.missingLandmarks.join(', ')}</div>
+                </div>
+              )}
+            </Section>
+
+            {/* Performance */}
+            <Section title="სიჩქარე" icon={Icons.Zap} id="performance">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div className="p-4 bg-gray-50 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-gray-800">{results.performance.totalScripts}</div>
+                  <div className="text-sm text-gray-500">სკრიპტები</div>
+                </div>
+                <div className={`p-4 rounded-lg text-center ${results.performance.renderBlockingScripts > 3 ? 'bg-red-50' : 'bg-green-50'}`}>
+                  <div className={`text-2xl font-bold ${results.performance.renderBlockingScripts > 3 ? 'text-red-700' : 'text-green-700'}`}>{results.performance.renderBlockingScripts}</div>
+                  <div className="text-sm text-gray-500">მბლოკავი სკრიპტი</div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-gray-800">{results.performance.preloads}</div>
+                  <div className="text-sm text-gray-500">Preloads</div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-gray-800">{results.performance.estimatedWeight || '—'}</div>
+                  <div className="text-sm text-gray-500">HTML ზომა</div>
+                </div>
+              </div>
+            </Section>
+
+            {/* Security */}
+            <Section title="უსაფრთხოება" icon={Icons.Lock} id="security">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div className={`text-center p-4 rounded-lg ${results.security.isHttps ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`text-2xl font-bold ${results.security.isHttps ? 'text-green-700' : 'text-red-700'}`}>{results.security.isHttps ? '✓' : '✗'}</div>
+                  <div className="text-sm text-gray-600">HTTPS</div>
+                </div>
+                <div className={`text-center p-4 rounded-lg ${results.security.mixedContentCount === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`text-2xl font-bold ${results.security.mixedContentCount === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.security.mixedContentCount}</div>
+                  <div className="text-sm text-gray-600">Mixed Content</div>
+                </div>
+                <div className={`text-center p-4 rounded-lg ${results.links.unsafeExternalCount === 0 ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                  <div className={`text-2xl font-bold ${results.links.unsafeExternalCount === 0 ? 'text-green-700' : 'text-yellow-700'}`}>{results.links.unsafeExternalCount}</div>
+                  <div className="text-sm text-gray-600">Unsafe Links</div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-700">{results.security.protocolRelativeCount}</div>
+                  <div className="text-sm text-gray-600">Protocol-relative</div>
+                </div>
+              </div>
+            </Section>
+
+            {/* International / Hreflang */}
+            {results.international.hreflangs.length > 0 && (
+              <Section title="Hreflang / საერთაშორისო" icon={Icons.Languages} id="international" badge={<span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-sm">{results.international.hreflangs.length} ენა</span>}>
+                <div className="mt-4 space-y-2">
+                  {results.international.hreflangs.map((h, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded text-sm">
+                      <span className="font-mono font-semibold text-gray-700 w-20">{h.hreflang}</span>
+                      <span className="text-gray-600 truncate flex-1">{h.href}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <CheckBadge ok={results.international.hasXDefault} label="x-default" />
+                  <CheckBadge ok={results.international.hasSelfReference} label="Self-reference" />
+                  <CheckBadge ok={results.international.canonicalInHreflang || false} label="Canonical in hreflang" />
+                  <CheckBadge ok={results.international.langMatchesHreflang || false} label="Lang matches hreflang" />
+                </div>
+              </Section>
+            )}
+
+            {/* Links */}
+            <Section title="ბმულები" icon={Icons.Link} id="links">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg"><div className="text-2xl font-bold text-blue-700">{results.links.total}</div><div className="text-sm text-blue-600">სულ</div></div>
+                <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-700">{results.links.internal}</div><div className="text-sm text-green-600">შიდა</div></div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg"><div className="text-2xl font-bold text-purple-700">{results.links.external}</div><div className="text-sm text-purple-600">გარე</div></div>
+                <div className={`text-center p-4 rounded-lg ${results.links.broken > 0 ? 'bg-red-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.links.broken > 0 ? 'text-red-700' : 'text-gray-700'}`}>{results.links.broken}</div><div className="text-sm text-gray-600">ცარიელი</div></div>
+                <div className={`text-center p-4 rounded-lg ${results.links.genericAnchors > 0 ? 'bg-yellow-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.links.genericAnchors > 0 ? 'text-yellow-700' : 'text-gray-700'}`}>{results.links.genericAnchors}</div><div className="text-sm text-gray-600">ზოგადი</div></div>
+              </div>
+            </Section>
+
+            {/* Images */}
+            <Section title="სურათები" icon={Icons.Image} id="images">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                <div className="text-center p-4 bg-gray-50 rounded-lg"><div className="text-2xl font-bold text-gray-700">{results.images.total}</div><div className="text-sm text-gray-600">სულ</div></div>
+                <div className={`text-center p-4 rounded-lg ${results.images.withoutAlt > 0 ? 'bg-red-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${results.images.withoutAlt > 0 ? 'text-red-700' : 'text-green-700'}`}>{results.images.withoutAlt}</div><div className="text-sm text-gray-600">alt-ის გარეშე</div></div>
+                <div className={`text-center p-4 rounded-lg ${results.images.withoutDimensions > 0 ? 'bg-orange-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${results.images.withoutDimensions > 0 ? 'text-orange-700' : 'text-green-700'}`}>{results.images.withoutDimensions}</div><div className="text-sm text-gray-600">ზომის გარეშე</div></div>
+                <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-700">{results.images.lazyLoaded}</div><div className="text-sm text-green-600">lazy loading</div></div>
+                <div className="text-center p-4 bg-teal-50 rounded-lg"><div className="text-2xl font-bold text-teal-700">{results.images.modernFormats || 0}</div><div className="text-sm text-teal-600">WebP/AVIF</div></div>
+              </div>
+            </Section>
+
+            {/* Schema */}
+            {results.schema.count > 0 && (
+              <Section title="Schema.org" icon={Icons.Code} id="schema" badge={<span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-sm">{results.schema.count}</span>}>
+                <div className="mt-4">
+                  <div className="flex flex-wrap gap-2">
+                    {results.schema.types.map((t, i) => <span key={i} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">{t}</span>)}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-3">{results.schema.valid} ვალიდური{results.schema.invalid > 0 && <span className="text-red-600">, {results.schema.invalid} არავალიდური</span>}</div>
+                </div>
+              </Section>
+            )}
+
+            {/* Social */}
+            <Section title="სოციალური ქსელები" icon={Icons.Share} id="social">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="font-medium text-blue-800 mb-2">Open Graph</div>
+                  <div className="text-sm space-y-1">
+                    <CheckBadge ok={!!results.social.og.title} label="og:title" />
+                    <CheckBadge ok={!!results.social.og.description} label="og:description" />
+                    <CheckBadge ok={!!results.social.og.image} label="og:image" />
+                    <CheckBadge ok={!!results.social.og.url} label="og:url" />
+                  </div>
+                </div>
+                <div className="p-4 bg-sky-50 rounded-lg">
+                  <div className="font-medium text-sky-800 mb-2">Twitter Card</div>
+                  <div className="text-sm space-y-1">
+                    <CheckBadge ok={!!results.social.twitter.card} label={`card: ${results.social.twitter.card || '—'}`} />
+                    <CheckBadge ok={!!results.social.twitter.image} label="image" />
+                  </div>
+                </div>
+              </div>
+            </Section>
+
+            {/* Platform */}
+            <Section title="პლატფორმა" icon={Icons.Zap} id="platform">
+              <div className="mt-4 space-y-3">
+                {results.platform.cms.length > 0 && <div className="flex items-center gap-2 flex-wrap"><span className="text-gray-500">CMS:</span>{results.platform.cms.map((c, i) => <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">{c}</span>)}</div>}
+                {results.platform.frameworks.length > 0 && <div className="flex items-center gap-2 flex-wrap"><span className="text-gray-500">Framework:</span>{results.platform.frameworks.map((f, i) => <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">{f}</span>)}</div>}
+                {results.platform.analytics && results.platform.analytics.length > 0 && <div className="flex items-center gap-2 flex-wrap"><span className="text-gray-500">Analytics:</span>{results.platform.analytics.map((a, i) => <span key={i} className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm">{a}</span>)}</div>}
+                <div className="flex items-center gap-2"><span className="text-gray-500">რენდერი:</span><span className={`px-2 py-1 rounded text-sm ${results.platform.isCSR ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{results.platform.renderMethod}</span></div>
+              </div>
+            </Section>
+
+            {/* AI Content */}
+            {results.content.aiScore > 20 && (
+              <Section title="AI კონტენტის ანალიზი" icon={Icons.Brain} id="ai">
+                <div className="mt-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <DonutChart value={results.content.aiScore} size={80} strokeWidth={8} color={results.content.aiScore > 50 ? '#ef4444' : '#f59e0b'} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xl font-bold">{results.content.aiScore}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800">AI კონტენტის ინდიკატორი</div>
+                      <div className="text-sm text-gray-500">მაღალი მნიშვნელობა მიუთითებს AI-გენერირებულ კონტენტზე</div>
+                    </div>
+                  </div>
+                  {results.content.aiPhrases.length > 0 && (
+                    <div className="mt-3 text-sm text-gray-600">
+                      ნაპოვნი ფრაზები: {results.content.aiPhrases.slice(0, 5).join(', ')}{results.content.aiPhrases.length > 5 && ` +${results.content.aiPhrases.length - 5}`}
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Trust Signals */}
+            <Section title="სანდოობა (E-E-A-T)" icon={Icons.Users} id="trust">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+                <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasAboutPage ? 'bg-green-50' : 'bg-gray-50'}`}>
+                  <div className={`text-2xl mb-1 ${results.trustSignals.hasAboutPage ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasAboutPage ? '✓' : '—'}</div>
+                  <div className="text-sm text-gray-600">ჩვენს შესახებ</div>
+                </div>
+                <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasContactPage ? 'bg-green-50' : 'bg-gray-50'}`}>
+                  <div className={`text-2xl mb-1 ${results.trustSignals.hasContactPage ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasContactPage ? '✓' : '—'}</div>
+                  <div className="text-sm text-gray-600">კონტაქტი</div>
+                </div>
+                <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasPrivacyPage ? 'bg-green-50' : 'bg-gray-50'}`}>
+                  <div className={`text-2xl mb-1 ${results.trustSignals.hasPrivacyPage ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasPrivacyPage ? '✓' : '—'}</div>
+                  <div className="text-sm text-gray-600">კონფიდენც.</div>
+                </div>
+                <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasAuthor ? 'bg-green-50' : 'bg-gray-50'}`}>
+                  <div className={`text-2xl mb-1 ${results.trustSignals.hasAuthor ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasAuthor ? '✓' : '—'}</div>
+                  <div className="text-sm text-gray-600">ავტორი</div>
+                </div>
+                <div className={`p-3 rounded-lg text-center ${results.trustSignals.socialLinksCount > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                  <div className={`text-2xl font-bold mb-1 ${results.trustSignals.socialLinksCount > 0 ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.socialLinksCount || '—'}</div>
+                  <div className="text-sm text-gray-600">სოც. ბმულები</div>
+                </div>
+              </div>
+              {results.trustSignals.socialPlatforms && results.trustSignals.socialPlatforms.length > 0 && (
+                <div className="mt-4 flex items-center gap-2 flex-wrap">
+                  <span className="text-gray-500 text-sm">სოც. ქსელები:</span>
+                  {results.trustSignals.socialPlatforms.map((s, i) => <span key={i} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">{s}</span>)}
+                </div>
+              )}
+            </Section>
           </div>
         )}
-        </Section>
-      )}
+      </div>
 
-      {/* Links */}
-      <Section title="ბმულები" icon={Icons.Link} id="links">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
-      <div className="text-center p-4 bg-blue-50 rounded-lg"><div className="text-2xl font-bold text-blue-700">{results.links.total}</div><div className="text-sm text-blue-600">სულ</div></div>
-      <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-700">{results.links.internal}</div><div className="text-sm text-green-600">შიდა</div></div>
-      <div className="text-center p-4 bg-purple-50 rounded-lg"><div className="text-2xl font-bold text-purple-700">{results.links.external}</div><div className="text-sm text-purple-600">გარე</div></div>
-      <div className={`text-center p-4 rounded-lg ${results.links.broken > 0 ? 'bg-red-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.links.broken > 0 ? 'text-red-700' : 'text-gray-700'}`}>{results.links.broken}</div><div className="text-sm text-gray-600">ცარიელი</div></div>
-      <div className={`text-center p-4 rounded-lg ${results.links.genericAnchors > 0 ? 'bg-yellow-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.links.genericAnchors > 0 ? 'text-yellow-700' : 'text-gray-700'}`}>{results.links.genericAnchors}</div><div className="text-sm text-gray-600">ზოგადი</div></div>
+      {/* Footer */}
+      <div className="text-center py-8 text-gray-400 text-sm">
+        SEO აუდიტი • 75+ შემოწმება • {new Date().getFullYear()}
       </div>
-      </Section>
-
-      {/* Images */}
-      <Section title="სურათები" icon={Icons.Image} id="images">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
-      <div className="text-center p-4 bg-gray-50 rounded-lg"><div className="text-2xl font-bold text-gray-700">{results.images.total}</div><div className="text-sm text-gray-600">სულ</div></div>
-      <div className={`text-center p-4 rounded-lg ${results.images.withoutAlt > 0 ? 'bg-red-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${results.images.withoutAlt > 0 ? 'text-red-700' : 'text-green-700'}`}>{results.images.withoutAlt}</div><div className="text-sm text-gray-600">alt-ის გარეშე</div></div>
-      <div className={`text-center p-4 rounded-lg ${results.images.withoutDimensions > 0 ? 'bg-orange-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${results.images.withoutDimensions > 0 ? 'text-orange-700' : 'text-green-700'}`}>{results.images.withoutDimensions}</div><div className="text-sm text-gray-600">ზომის გარეშე</div></div>
-      <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-700">{results.images.lazyLoaded}</div><div className="text-sm text-green-600">lazy loading</div></div>
-      <div className={`text-center p-4 rounded-lg ${results.images.lazyAboveFold > 0 ? 'bg-yellow-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.images.lazyAboveFold > 0 ? 'text-yellow-700' : 'text-gray-700'}`}>{results.images.lazyAboveFold}</div><div className="text-sm text-gray-600">lazy above-fold</div></div>
-      </div>
-      </Section>
-
-      {/* Schema */}
-      {results.schema.count > 0 && (
-        <Section title="Schema.org" icon={Icons.Code} id="schema" badge={<span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-sm">{results.schema.count}</span>}>
-        <div className="mt-4">
-        <div className="flex flex-wrap gap-2">
-        {results.schema.types.map((t, i) => <span key={i} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">{t}</span>)}
-        </div>
-        <div className="text-sm text-gray-500 mt-3">{results.schema.valid} ვალიდური{results.schema.invalid > 0 && <span className="text-red-600">, {results.schema.invalid} არავალიდური</span>}{results.schema.missingContext > 0 && <span className="text-yellow-600">, {results.schema.missingContext} აკლია @context</span>}</div>
-        {results.schema.details.some(d => d.issues.length > 0) && (
-          <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
-          <div className="text-sm font-medium text-yellow-800 mb-2">Schema პრობლემები:</div>
-          {results.schema.details.filter(d => d.issues.length > 0).map((d, i) => (
-            <div key={i} className="text-sm text-yellow-700"><strong>{d.type}:</strong> {d.issues.join(', ')}</div>
-          ))}
-          </div>
-        )}
-        </div>
-        </Section>
-      )}
-
-      {/* Social */}
-      <Section title="სოციალური ქსელები" icon={Icons.Share} id="social">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      <div className="p-4 bg-blue-50 rounded-lg">
-      <div className="font-medium text-blue-800 mb-2">Open Graph</div>
-      <div className="text-sm space-y-1">
-      <CheckBadge ok={!!results.social.og.title} label={`og:title ${results.social.og.title ? '✓' : ''}`} />
-      <CheckBadge ok={!!results.social.og.description} label="og:description" />
-      <CheckBadge ok={!!results.social.og.image} label="og:image" />
-      <CheckBadge ok={!!results.social.og.url} label="og:url" />
-      </div>
-      </div>
-      <div className="p-4 bg-sky-50 rounded-lg">
-      <div className="font-medium text-sky-800 mb-2">Twitter Card</div>
-      <div className="text-sm space-y-1">
-      <CheckBadge ok={!!results.social.twitter.card} label={`card: ${results.social.twitter.card || '—'}`} />
-      <CheckBadge ok={!!results.social.twitter.image} label="image" />
-      </div>
-      </div>
-      </div>
-      </Section>
-
-      {/* Platform */}
-      <Section title="პლატფორმა" icon={Icons.Zap} id="platform">
-      <div className="mt-4 space-y-3">
-      {results.platform.cms.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-gray-500">CMS:</span>
-        {results.platform.cms.map((c, i) => <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">{c}</span>)}
-        </div>
-      )}
-      {results.platform.frameworks.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-gray-500">Framework:</span>
-        {results.platform.frameworks.map((f, i) => <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">{f}</span>)}
-        </div>
-      )}
-      <div className="flex items-center gap-2">
-      <span className="text-gray-500">რენდერი:</span>
-      <span className={`px-2 py-1 rounded text-sm ${results.platform.isCSR ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{results.platform.renderMethod}</span>
-      </div>
-      {results.trustSignals.socialPlatforms.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-gray-500">სოც. ქსელები:</span>
-        {results.trustSignals.socialPlatforms.map((s, i) => <span key={i} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">{s}</span>)}
-        </div>
-      )}
-      </div>
-      </Section>
-
-      {/* AI Content */}
-      {results.content.aiScore > 20 && (
-        <Section title="AI კონტენტის ანალიზი" icon={Icons.Brain} id="ai">
-        <div className="mt-4">
-        <div className="flex items-center gap-4">
-        <div className="text-3xl font-bold text-purple-700">{results.content.aiScore}%</div>
-        <div className="flex-1">
-        <div className="h-2 bg-purple-200 rounded-full">
-        <div className="h-2 bg-purple-600 rounded-full" style={{ width: `${results.content.aiScore}%` }} />
-        </div>
-        </div>
-        </div>
-        {results.content.aiPhrases.length > 0 && (
-          <div className="mt-3 text-sm text-purple-700">
-          ნაპოვნი ფრაზები: {results.content.aiPhrases.slice(0, 5).join(', ')}{results.content.aiPhrases.length > 5 && ` +${results.content.aiPhrases.length - 5}`}
-          </div>
-        )}
-        </div>
-        </Section>
-      )}
-
-      {/* Trust Signals */}
-      <Section title="სანდოობა (E-E-A-T)" icon={Icons.Users} id="trust">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-      <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasAboutPage ? 'bg-green-50' : 'bg-gray-50'}`}>
-      <div className={`text-2xl mb-1 ${results.trustSignals.hasAboutPage ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasAboutPage ? '✓' : '—'}</div>
-      <div className="text-sm text-gray-600">ჩვენს შესახებ</div>
-      </div>
-      <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasContactPage ? 'bg-green-50' : 'bg-gray-50'}`}>
-      <div className={`text-2xl mb-1 ${results.trustSignals.hasContactPage ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasContactPage ? '✓' : '—'}</div>
-      <div className="text-sm text-gray-600">კონტაქტი</div>
-      </div>
-      <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasPrivacyPage ? 'bg-green-50' : 'bg-gray-50'}`}>
-      <div className={`text-2xl mb-1 ${results.trustSignals.hasPrivacyPage ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasPrivacyPage ? '✓' : '—'}</div>
-      <div className="text-sm text-gray-600">კონფიდენც.</div>
-      </div>
-      <div className={`p-3 rounded-lg text-center ${results.trustSignals.hasAuthor ? 'bg-green-50' : 'bg-gray-50'}`}>
-      <div className={`text-2xl mb-1 ${results.trustSignals.hasAuthor ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.hasAuthor ? '✓' : '—'}</div>
-      <div className="text-sm text-gray-600">ავტორი</div>
-      </div>
-      <div className={`p-3 rounded-lg text-center ${results.trustSignals.socialLinksCount > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
-      <div className={`text-2xl font-bold mb-1 ${results.trustSignals.socialLinksCount > 0 ? 'text-green-600' : 'text-gray-400'}`}>{results.trustSignals.socialLinksCount || '—'}</div>
-      <div className="text-sm text-gray-600">სოც. ბმულები</div>
-      </div>
-      </div>
-      </Section>
-      </div>
-    )}
-    </div>
-
-    {/* Footer */}
-    <div className="text-center py-8 text-gray-400 text-sm">
-    SEO აუდიტი • 10xSEO • {new Date().getFullYear()}
-    </div>
     </div>
   );
 }
