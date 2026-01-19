@@ -90,13 +90,13 @@ function calculateReadability(text: string): ReadabilityData {
   const fleschScore = Math.max(0, Math.min(100, 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord));
 
   let fleschGrade: string;
-  if (fleschScore >= 90) fleschGrade = 'Very Easy (5th grade)';
-  else if (fleschScore >= 80) fleschGrade = 'Easy (6th grade)';
-  else if (fleschScore >= 70) fleschGrade = 'Fairly Easy (7th grade)';
-  else if (fleschScore >= 60) fleschGrade = 'Standard (8-9th grade)';
-  else if (fleschScore >= 50) fleschGrade = 'Fairly Difficult (10-12th grade)';
-  else if (fleschScore >= 30) fleschGrade = 'Difficult (College)';
-  else fleschGrade = 'Very Difficult (College graduate)';
+  if (fleschScore >= 90) fleschGrade = 'ძალიან მარტივი (5 კლასი)';
+  else if (fleschScore >= 80) fleschGrade = 'მარტივი (6 კლასი)';
+  else if (fleschScore >= 70) fleschGrade = 'საკმაოდ მარტივი (7 კლასი)';
+  else if (fleschScore >= 60) fleschGrade = 'სტანდარტული (8-9 კლასი)';
+  else if (fleschScore >= 50) fleschGrade = 'საკმაოდ რთული (10-12 კლასი)';
+  else if (fleschScore >= 30) fleschGrade = 'რთული (კოლეჯი)';
+  else fleschGrade = 'ძალიან რთული (უნივერსიტეტი)';
 
   return { fleschScore: Math.round(fleschScore * 10) / 10, fleschGrade, avgSentenceLength: Math.round(avgSentenceLength * 10) / 10, avgSyllablesPerWord: Math.round(avgSyllablesPerWord * 100) / 100, complexWordPercentage: Math.round(complexWordPercentage * 10) / 10 };
 }

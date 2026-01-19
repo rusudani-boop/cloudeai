@@ -219,7 +219,7 @@ export default function SEOChecker() {
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <h1 className="text-3xl font-bold">SEO აუდიტი</h1>
-          <p className="text-emerald-100 mt-1">ვებგვერდის SEO ანალიზი • 75+ შემოწმება</p>
+          <p className="text-emerald-100 mt-1">ვებგვერდის SEO ანალიზი • {results ? `${results.summary.totalChecks} შემოწმება შესრულდა` : '75+ შემოწმება'}</p>
         </div>
       </div>
 
@@ -314,13 +314,14 @@ export default function SEOChecker() {
               </div>
 
               {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-6">
+                <div className="p-3 bg-slate-50 rounded-lg text-center"><div className="text-2xl font-bold text-slate-700">{results.summary.totalChecks}</div><div className="text-xs text-slate-600">შემოწმება</div></div>
                 <div className="p-3 bg-green-50 rounded-lg text-center"><div className="text-2xl font-bold text-green-700">{results.summary.passedChecks}</div><div className="text-xs text-green-600">წარმატებული</div></div>
                 <div className="p-3 bg-red-50 rounded-lg text-center"><div className="text-2xl font-bold text-red-700">{results.issues.length}</div><div className="text-xs text-red-600">პრობლემა</div></div>
                 <div className="p-3 bg-blue-50 rounded-lg text-center"><div className="text-2xl font-bold text-blue-700">{results.content.wordCount}</div><div className="text-xs text-blue-600">სიტყვა</div></div>
                 <div className="p-3 bg-purple-50 rounded-lg text-center"><div className="text-2xl font-bold text-purple-700">{results.images.total}</div><div className="text-xs text-purple-600">სურათი</div></div>
                 <div className="p-3 bg-amber-50 rounded-lg text-center"><div className="text-2xl font-bold text-amber-700">{results.schema.count}</div><div className="text-xs text-amber-600">Schema</div></div>
-                <div className="p-3 bg-teal-50 rounded-lg text-center"><div className="text-2xl font-bold text-teal-700">{Math.round(results.content.readability?.fleschScore || 0)}</div><div className="text-xs text-teal-600">Flesch Score</div></div>
+                <div className="p-3 bg-teal-50 rounded-lg text-center"><div className="text-2xl font-bold text-teal-700">{(results.content.readability?.fleschScore || 0).toFixed(1)}</div><div className="text-xs text-teal-600">Flesch Score</div></div>
               </div>
 
               {/* Export Buttons */}
@@ -336,10 +337,92 @@ export default function SEOChecker() {
                 {results.issues.map((issue, i) => (
                   <div key={i} className={`p-4 rounded-lg border ${getSeverityStyle(issue.severity)}`}>
                     <div className="flex items-start justify-between gap-4">
-                      <div>
+                      <div className="flex-1">
                         <div className="font-medium">{issue.issueGe}</div>
                         <div className="text-sm mt-1 opacity-80"><code className="bg-white/50 px-1 rounded">{issue.location}</code></div>
                         {issue.current && <div className="text-xs mt-1 opacity-70 truncate max-w-md">მიმდინარე: {issue.current}</div>}
+                        {issue.details && <div className="text-xs mt-1 opacity-70">{issue.details}</div>}
+
+                        {/* Show broken links list */}
+                        {issue.id === 'broken-links' && results.links.brokenList && results.links.brokenList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">გატეხილი ბმულები:</div>
+                            {results.links.brokenList.map((link: {href: string; text: string}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-red-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
+                                {link.text && <span className="opacity-60 truncate">({link.text})</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show generic anchors list */}
+                        {issue.id === 'generic-anchors' && results.links.genericAnchorsList && results.links.genericAnchorsList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">ზოგადი ანკორები:</div>
+                            {results.links.genericAnchorsList.slice(0, 5).map((link: {text: string; href: string}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-yellow-600">•</span>
+                                <code className="bg-white/50 px-1 rounded">&quot;{link.text}&quot;</code>
+                                <span className="opacity-60 truncate max-w-xs">→ {link.href}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show mixed content URLs */}
+                        {issue.id === 'mixed-content' && results.security.mixedContentUrls && results.security.mixedContentUrls.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">HTTP რესურსები HTTPS გვერდზე:</div>
+                            {results.security.mixedContentUrls.map((url: string, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-red-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-md">{url}</code>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show duplicate IDs */}
+                        {issue.id === 'duplicate-ids' && results.dom.duplicateIds && results.dom.duplicateIds.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">დუბლირებული ID-ები: </span>
+                            {results.dom.duplicateIds.map((id: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">#{id}</code>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show deprecated elements */}
+                        {issue.id === 'deprecated' && results.dom.deprecatedElements && results.dom.deprecatedElements.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">მოძველებული ტეგები: </span>
+                            {results.dom.deprecatedElements.map((el: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">&lt;{el}&gt;</code>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show skipped headings */}
+                        {issue.id === 'skipped-headings' && results.accessibility.skippedHeadings && results.accessibility.skippedHeadings.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">გამოტოვებული: </span>
+                            {results.accessibility.skippedHeadings.map((skip: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">{skip}</code>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show missing landmarks */}
+                        {issue.id === 'missing-landmarks' && results.accessibility.aria?.missingLandmarks && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs">
+                            <span className="font-medium">აკლია: </span>
+                            {results.accessibility.aria.missingLandmarks.map((lm: string, j: number) => (
+                              <code key={j} className="bg-white/50 px-1 rounded mx-0.5">{lm}</code>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <span className="text-xs font-medium px-2 py-1 rounded bg-white/50 whitespace-nowrap">{getSeverityLabel(issue.severity)}</span>
                     </div>
@@ -368,7 +451,7 @@ export default function SEOChecker() {
                     <div className="relative">
                       <DonutChart value={results.content.readability?.fleschScore || 0} size={100} strokeWidth={10} color={results.content.readability?.fleschScore >= 60 ? '#10b981' : results.content.readability?.fleschScore >= 30 ? '#f59e0b' : '#ef4444'} />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl font-bold">{Math.round(results.content.readability?.fleschScore || 0)}</span>
+                        <span className="text-2xl font-bold">{(results.content.readability?.fleschScore || 0).toFixed(1)}</span>
                       </div>
                     </div>
                     <div>
