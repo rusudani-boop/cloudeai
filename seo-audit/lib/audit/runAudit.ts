@@ -332,15 +332,38 @@ function analyzeInternational(doc: Document, sourceUrl: string, canonicalHref: s
 
   const issues: string[] = [];
 
-  // Check for duplicate hreflang language codes
+  // Check for duplicate hreflang language codes (normalize to base language)
+  // de-DE and de should be considered same language pointing to same URL = duplicate
   const duplicateHreflangs: string[] = [];
-  const seenLangs = new Map<string, number>();
+  const seenLangs = new Map<string, { variants: string[]; urls: string[] }>();
+
   hreflangs.forEach((h) => {
-    const lang = h.hreflang.toLowerCase();
-    seenLangs.set(lang, (seenLangs.get(lang) || 0) + 1);
+    if (h.hreflang === 'x-default') return;
+
+    // Normalize to base language (de-DE -> de, en-US -> en)
+    const baseLang = h.hreflang.toLowerCase().split('-')[0];
+    const normalizedUrl = h.href.toLowerCase().replace(/\/$/, '');
+    const existing = seenLangs.get(baseLang);
+
+    if (existing) {
+      if (!existing.variants.includes(h.hreflang)) existing.variants.push(h.hreflang);
+      existing.urls.push(normalizedUrl);
+    } else {
+      seenLangs.set(baseLang, { variants: [h.hreflang], urls: [normalizedUrl] });
+    }
   });
-  seenLangs.forEach((count, lang) => {
-    if (count > 1) duplicateHreflangs.push(`${lang} (${count}x)`);
+
+  // Find problematic duplicates
+  seenLangs.forEach((data, baseLang) => {
+    const uniqueUrls = [...new Set(data.urls)];
+    // If same URL appears multiple times with same base language = duplicate
+    if (data.urls.length > uniqueUrls.length) {
+      duplicateHreflangs.push(`${baseLang}: ${data.variants.join(' & ')} → იგივე URL-ზე მიუთითებს`);
+    }
+    // If both "de" and "de-DE" exist - potentially confusing
+    else if (data.variants.length > 1 && data.variants.some(v => !v.includes('-')) && data.variants.some(v => v.includes('-'))) {
+      duplicateHreflangs.push(`${baseLang}: ${data.variants.join(' & ')} → დააზუსტეთ (გამოიყენეთ ან ${baseLang} ან ${baseLang}-XX)`);
+    }
   });
 
   // Check for hreflangs pointing to non-canonical URLs (URLs with query params, fragments, or inconsistent trailing slashes)
@@ -433,6 +456,12 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
   // Detect actual content language
   const detectedLanguage = detectLanguage(bodyText);
 
+  // Detect title language (if title is long enough)
+  const titleLanguage = title.length > 10 ? detectLanguage(title) : null;
+
+  // Check if title language matches content language
+  const titleContentLangMismatch = titleLanguage && detectedLanguage && titleLanguage !== detectedLanguage;
+
   const wordFreq: Record<string, number> = {};
   words.forEach((w) => {
     const word = w.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -440,7 +469,7 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
   });
   const keywordDensity = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count, percentage: Math.round((count / wordCount) * 10000) / 100 }));
 
-  return { headings, wordCount, characterCount, sentenceCount: sentences.length, paragraphCount: paragraphs.length, readingTime, titleH1Duplicate, duplicateParagraphs, aiScore, aiPhrases, readability, keywordDensity, detectedLanguage };
+  return { headings, wordCount, characterCount, sentenceCount: sentences.length, paragraphCount: paragraphs.length, readingTime, titleH1Duplicate, duplicateParagraphs, aiScore, aiPhrases, readability, keywordDensity, detectedLanguage, titleLanguage, titleContentLangMismatch };
 }
 
 // ============================================
@@ -775,6 +804,22 @@ function collectIssues(data: any): AuditIssue[] {
         details: `${SEVERITY_PHRASES.high} გვერდის კონტენტი ${langNames[content.detectedLanguage] || content.detectedLanguage} ენაზეა, მაგრამ HTML lang ატრიბუტი მიუთითებს "${technical.language}"-ზე. ეს აბნევს საძიებო სისტემებს და სკრინრიდერებს.`
       });
     }
+  }
+
+  // Title vs Content language mismatch (German title but English content, etc.)
+  if (content.titleContentLangMismatch && content.titleLanguage && content.detectedLanguage) {
+    const langNames: Record<string, string> = { 'ka': 'ქართული', 'ru': 'რუსული', 'de': 'გერმანული', 'en': 'ინგლისური' };
+    issues.push({
+      id: 'title-content-lang-mismatch',
+      severity: 'high',
+      category: 'კონტენტი',
+      issue: `Title language (${content.titleLanguage}) differs from content language (${content.detectedLanguage})`,
+      issueGe: `სათაურის ენა (${langNames[content.titleLanguage] || content.titleLanguage}) განსხვავდება კონტენტის ენისგან (${langNames[content.detectedLanguage] || content.detectedLanguage})`,
+      location: '<title>',
+      fix: 'Use same language for title and content',
+      fixGe: 'გამოიყენეთ ერთი ენა სათაურისა და კონტენტისთვის',
+      details: `${SEVERITY_PHRASES.high} სათაური ${langNames[content.titleLanguage] || content.titleLanguage} ენაზეა, მაგრამ გვერდის კონტენტი ${langNames[content.detectedLanguage] || content.detectedLanguage} ენაზეა. ეს აბნევს მომხმარებლებს და საძიებო სისტემებს.`
+    });
   }
 
   // Robots
