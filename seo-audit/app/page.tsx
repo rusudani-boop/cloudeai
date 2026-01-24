@@ -30,10 +30,10 @@ interface AuditResult {
   fetchMethod: 'url' | 'html';
   summary: { criticalIssues: number; highIssues: number; mediumIssues: number; lowIssues: number; totalChecks: number; passedChecks: number; };
   technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null }; llmsTxt: { found: boolean; mentioned: boolean }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
-  international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; };
-  content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; };
-  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; };
-  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; };
+  international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; duplicateHreflangs?: string[]; nonCanonicalHreflangs?: string[]; };
+  content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; detectedLanguage?: string; };
+  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; redirectLinks?: number; redirectList?: { href: string; text: string; status: number }[]; };
+  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; };
   schema: { count: number; types: string[]; valid: number; invalid: number; details: SchemaItem[]; missingContext: number; hasWebSiteSearch: boolean; hasBreadcrumb: boolean; hasOrganization: boolean; hasFAQ: boolean; hasHowTo: boolean; };
   social: { og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null; siteName: string | null; locale: string | null }; twitter: { card: string | null; site: string | null; creator: string | null; title: string | null; description: string | null; image: string | null }; isComplete: boolean; hasArticleTags: boolean; };
   accessibility: { buttonsWithoutLabel: number; inputsWithoutLabel: number; linksWithoutText: number; iframesWithoutTitle: number; skippedHeadings: string[]; hasSkipLink: boolean; hasLangAttribute: boolean; clickableImagesWithoutAlt: number; positiveTabindex: number; hasMainLandmark: boolean; hasNavLandmark: boolean; hasFocusVisible: boolean; colorContrastIssues: number; aria: AriaData; tablesWithoutHeaders: number; autoplayMedia: number; };
@@ -334,7 +334,10 @@ export default function SEOChecker() {
             {/* Issues */}
             <Section title="ნაპოვნი პრობლემები" icon={Icons.Alert} id="issues" badge={<span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-sm">{results.issues.length}</span>}>
               <div className="space-y-3 mt-4">
-                {results.issues.map((issue, i) => (
+                {[...results.issues].sort((a, b) => {
+                  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+                  return (order[a.severity] ?? 4) - (order[b.severity] ?? 4);
+                }).map((issue, i) => (
                   <div key={i} className={`p-4 rounded-lg border ${getSeverityStyle(issue.severity)}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -366,6 +369,37 @@ export default function SEOChecker() {
                                 <span className="text-yellow-600">•</span>
                                 <code className="bg-white/50 px-1 rounded">&quot;{link.text}&quot;</code>
                                 <span className="opacity-60 truncate max-w-xs">→ {link.href}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show broken images list */}
+                        {issue.id === 'broken-images' && results.images.brokenList && results.images.brokenList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">გატეხილი სურათები:</div>
+                            {results.images.brokenList.map((img: {src: string; alt: string}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-red-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-xs">{img.src}</code>
+                                {img.alt && <span className="opacity-60 truncate">({img.alt})</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show redirect links */}
+                        {issue.id === 'redirect-links' && results.links.redirectList && results.links.redirectList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">გადამისამართებული ბმულები:</div>
+                            {results.links.redirectList.map((link: {href: string; text: string; status: number; location: string}, j: number) => (
+                              <div key={j} className="flex flex-col gap-1">
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-yellow-600">•</span>
+                                  <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
+                                  <span className="text-orange-600 font-medium">{link.status}</span>
+                                </div>
+                                <div className="ml-4 opacity-60 truncate">→ {link.location}</div>
                               </div>
                             ))}
                           </div>

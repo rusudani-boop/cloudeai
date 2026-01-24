@@ -331,7 +331,34 @@ function analyzeInternational(doc: Document, sourceUrl: string, canonicalHref: s
   }
 
   const issues: string[] = [];
+
+  // Check for duplicate hreflang language codes
+  const duplicateHreflangs: string[] = [];
+  const seenLangs = new Map<string, number>();
+  hreflangs.forEach((h) => {
+    const lang = h.hreflang.toLowerCase();
+    seenLangs.set(lang, (seenLangs.get(lang) || 0) + 1);
+  });
+  seenLangs.forEach((count, lang) => {
+    if (count > 1) duplicateHreflangs.push(`${lang} (${count}x)`);
+  });
+
+  // Check for hreflangs pointing to non-canonical URLs (URLs with query params, fragments, or inconsistent trailing slashes)
+  const nonCanonicalHreflangs: string[] = [];
   hreflangs.forEach((h, i) => {
+    if (h.href) {
+      try {
+        const url = new URL(h.href);
+        // Check for query parameters (might indicate non-canonical)
+        if (url.search && url.search.length > 1) {
+          nonCanonicalHreflangs.push(`${h.hreflang}: has query params (${url.search})`);
+        }
+        // Check for fragments
+        if (url.hash && url.hash.length > 1) {
+          nonCanonicalHreflangs.push(`${h.hreflang}: has fragment (${url.hash})`);
+        }
+      } catch {}
+    }
     if (h.href && !h.href.startsWith('http')) issues.push(`Hreflang #${i + 1}: Relative URL`);
     if (h.hreflang && h.hreflang !== 'x-default' && h.hreflang.includes('-')) {
       const parts = h.hreflang.split('-');
@@ -339,7 +366,7 @@ function analyzeInternational(doc: Document, sourceUrl: string, canonicalHref: s
     }
   });
 
-  return { hreflangs, hasXDefault, hasSelfReference, canonicalInHreflang, langMatchesHreflang, issues };
+  return { hreflangs, hasXDefault, hasSelfReference, canonicalInHreflang, langMatchesHreflang, issues, duplicateHreflangs, nonCanonicalHreflangs };
 }
 
 // ============================================
@@ -422,11 +449,18 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
 
 function analyzeLinks(doc: Document, sourceUrl: string) {
   const links = Array.from(doc.querySelectorAll('a[href]'));
-  const sourceHost = sourceUrl ? new URL(sourceUrl).hostname : '';
+  let sourceHost = '';
+  let baseUrl = '';
+  try {
+    const parsed = new URL(sourceUrl);
+    sourceHost = parsed.hostname;
+    baseUrl = `${parsed.protocol}//${parsed.host}`;
+  } catch {}
 
   let internal = 0, external = 0, broken = 0, genericAnchors = 0, nofollow = 0, sponsored = 0, ugc = 0, unsafeExternalCount = 0;
   const brokenList: { href: string; text: string }[] = [];
   const genericAnchorsList: { text: string; href: string }[] = [];
+  const internalUrls: { href: string; text: string }[] = []; // For redirect checking
 
   links.forEach((a) => {
     const href = a.getAttribute('href') || '';
@@ -434,8 +468,31 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     const rel = a.getAttribute('rel') || '';
 
     if (PATTERNS.EMPTY_HREFS.includes(href)) { broken++; brokenList.push({ href: href || '(empty)', text: text.substring(0, 50) }); }
-    if (href.startsWith('http')) { try { if (new URL(href).hostname === sourceHost) internal++; else external++; } catch {} }
-    else if (href.startsWith('/') || href.startsWith('./') || (!href.includes(':') && href)) internal++;
+
+    // Track internal vs external and collect full internal URLs
+    let isInternal = false;
+    let fullUrl = '';
+    if (href.startsWith('http')) {
+      try {
+        const linkHost = new URL(href).hostname;
+        if (linkHost === sourceHost) { isInternal = true; fullUrl = href; }
+        else external++;
+      } catch {}
+    } else if (href.startsWith('/')) {
+      isInternal = true;
+      fullUrl = baseUrl + href;
+    } else if (href.startsWith('./') || (!href.includes(':') && href && !href.startsWith('#'))) {
+      isInternal = true;
+      try { fullUrl = new URL(href, sourceUrl).href; } catch {}
+    }
+
+    if (isInternal) {
+      internal++;
+      if (fullUrl && !href.includes('#') && internalUrls.length < 20) {
+        internalUrls.push({ href: fullUrl, text: text.substring(0, 50) });
+      }
+    }
+
     if (PATTERNS.GENERIC_ANCHORS.includes(text)) { genericAnchors++; genericAnchorsList.push({ text, href: href.substring(0, 50) }); }
     if (rel.includes('nofollow')) nofollow++;
     if (rel.includes('sponsored')) sponsored++;
@@ -443,7 +500,14 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     if (a.getAttribute('target') === '_blank' && !rel.includes('noopener')) unsafeExternalCount++;
   });
 
-  return { total: links.length, internal, external, broken, brokenList: brokenList.slice(0, 10), genericAnchors, genericAnchorsList: genericAnchorsList.slice(0, 10), nofollow, sponsored, ugc, unsafeExternalCount, hasFooterLinks: !!doc.querySelector('footer a'), hasNavLinks: !!doc.querySelector('nav a') };
+  return {
+    total: links.length, internal, external, broken, brokenList: brokenList.slice(0, 10),
+    genericAnchors, genericAnchorsList: genericAnchorsList.slice(0, 10),
+    nofollow, sponsored, ugc, unsafeExternalCount,
+    hasFooterLinks: !!doc.querySelector('footer a'), hasNavLinks: !!doc.querySelector('nav a'),
+    internalUrls: internalUrls.slice(0, 15), // For redirect checking
+    redirectLinks: 0, redirectList: [] as { href: string; text: string; status: number; location: string }[]
+  };
 }
 
 // ============================================
@@ -736,6 +800,17 @@ function collectIssues(data: any): AuditIssue[] {
     if (!international.hasSelfReference) issues.push({ id: 'no-self-hreflang', severity: 'high', category: 'საერთაშორისო', issue: 'Missing self-referencing hreflang', issueGe: 'თვით-მიმთითებელი hreflang არ არის', location: '<head>', fix: 'Add hreflang pointing to current page', fixGe: 'დაამატეთ hreflang მიმდინარე გვერდზე', details: `${SEVERITY_PHRASES.high} ყველა hreflang სეტი უნდა შეიცავდეს თვით-მიმთითებელ ბმულს მიმდინარე გვერდზე.` });
     if (!international.canonicalInHreflang) issues.push({ id: 'canonical-not-in-hreflang', severity: 'high', category: 'საერთაშორისო', issue: 'Canonical URL missing from hreflang set', issueGe: 'Canonical არ არის hreflang-ში', location: '<head>', fix: 'Add canonical URL to hreflang set', fixGe: 'ჩართეთ canonical URL hreflang-ში', details: `${SEVERITY_PHRASES.high} Canonical URL უნდა იყოს hreflang სეტში.` });
     if (!international.langMatchesHreflang) issues.push({ id: 'lang-mismatch', severity: 'medium', category: 'საერთაშორისო', issue: 'HTML lang not matching hreflang', issueGe: 'HTML lang არ ემთხვევა hreflang-ს', location: '<html lang>', fix: 'Ensure lang attribute matches a hreflang', fixGe: 'შეასწორეთ lang ატრიბუტი', details: `${SEVERITY_PHRASES.medium} HTML-ის lang="${technical.language}" არ ემთხვევა არცერთ hreflang მნიშვნელობას.` });
+
+    // Duplicate hreflang languages
+    if (international.duplicateHreflangs && international.duplicateHreflangs.length > 0) {
+      issues.push({ id: 'duplicate-hreflangs', severity: 'high', category: 'საერთაშორისო', issue: `Duplicate hreflang languages: ${international.duplicateHreflangs.join(', ')}`, issueGe: `დუბლირებული hreflang ენები: ${international.duplicateHreflangs.join(', ')}`, location: '<head>', fix: 'Remove duplicate hreflang entries - each language should appear only once', fixGe: 'წაშალეთ დუბლირებული hreflang - თითოეული ენა მხოლოდ ერთხელ უნდა იყოს', details: `${SEVERITY_PHRASES.high} ერთი და იგივე ენის hreflang რამდენჯერმე მითითებულია. ეს აბნევს Google-ს.` });
+    }
+
+    // Hreflangs pointing to non-canonical URLs
+    if (international.nonCanonicalHreflangs && international.nonCanonicalHreflangs.length > 0) {
+      issues.push({ id: 'hreflang-non-canonical', severity: 'high', category: 'საერთაშორისო', issue: `Hreflang URLs may not be canonical`, issueGe: `Hreflang URL-ები შეიძლება არაკანონიკურია`, location: '<head>', fix: 'Hreflang URLs should be clean canonical URLs without query params or fragments', fixGe: 'Hreflang URL-ები უნდა იყოს სუფთა, query params-ის და fragment-ის გარეშე', details: `${SEVERITY_PHRASES.high} პრობლემები: ${international.nonCanonicalHreflangs.slice(0, 5).join('; ')}` });
+    }
+
     international.issues.forEach((issue: string, i: number) => issues.push({ id: `hreflang-${i}`, severity: 'high', category: 'საერთაშორისო', issue, issueGe: issue, location: '<head>', fix: 'Fix hreflang configuration', fixGe: 'გაასწორეთ hreflang', details: `${SEVERITY_PHRASES.high} ${issue}` }));
   }
 

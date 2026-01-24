@@ -81,13 +81,78 @@ export async function checkSitemap(baseUrl: string): Promise<{ found: boolean; u
 }
 
 export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; content: string | null }> {
-  try {
-    const url = new URL('/llms.txt', baseUrl).href;
-    const result = await fetchHtml(url, 5000);
-    // llms.txt should return 200 and contain text (not HTML error page)
-    if (result.status === 200 && !result.html.includes('<html') && !result.html.includes('<!DOCTYPE')) {
-      return { found: true, content: result.html.substring(0, 500) };
+  // Try multiple common llms.txt locations
+  const paths = ['/llms.txt', '/llms-full.txt', '/.well-known/llms.txt'];
+
+  for (const path of paths) {
+    try {
+      const url = new URL(path, baseUrl).href;
+      const result = await fetchHtml(url, 5000);
+
+      // llms.txt should return 200 and contain text (not HTML error page)
+      // Check that it's not an HTML page (could be a custom 404 page with 200 status)
+      const content = result.html.trim();
+      const lowerContent = content.toLowerCase();
+
+      if (result.status === 200 &&
+          content.length > 0 &&
+          !lowerContent.startsWith('<!doctype') &&
+          !lowerContent.startsWith('<html') &&
+          !lowerContent.includes('<head>') &&
+          !lowerContent.includes('<body>')) {
+        return { found: true, content: content.substring(0, 500) };
+      }
+    } catch {
+      // Try next path
     }
-    return { found: false, content: null };
-  } catch { return { found: false, content: null }; }
+  }
+
+  return { found: false, content: null };
+}
+
+// Check if a URL returns a redirect (301, 302, 307, 308)
+export async function checkRedirect(url: string, timeout = 3000): Promise<{ isRedirect: boolean; status: number; location: string | null }> {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(url);
+      const isHttps = parsed.protocol === 'https:';
+      const lib = isHttps ? https : http;
+
+      const req = lib.request({
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: parsed.pathname + parsed.search,
+        method: 'HEAD',
+        timeout,
+        headers: { ...HEADERS, Host: parsed.hostname },
+      }, (res) => {
+        const status = res.statusCode || 0;
+        const isRedirect = status >= 300 && status < 400;
+        resolve({ isRedirect, status, location: res.headers.location || null });
+      });
+
+      req.on('error', () => resolve({ isRedirect: false, status: 0, location: null }));
+      req.on('timeout', () => { req.destroy(); resolve({ isRedirect: false, status: 0, location: null }); });
+      req.end();
+    } catch {
+      resolve({ isRedirect: false, status: 0, location: null });
+    }
+  });
+}
+
+// Check multiple links for redirects (limited to first N links for performance)
+export async function checkLinksForRedirects(links: string[], limit = 10): Promise<{ href: string; status: number; location: string }[]> {
+  const redirectLinks: { href: string; status: number; location: string }[] = [];
+  const linksToCheck = links.slice(0, limit);
+
+  const results = await Promise.all(linksToCheck.map(async (href) => {
+    const result = await checkRedirect(href);
+    if (result.isRedirect && result.location) {
+      return { href, status: result.status, location: result.location };
+    }
+    return null;
+  }));
+
+  results.forEach((r) => { if (r) redirectLinks.push(r); });
+  return redirectLinks;
 }

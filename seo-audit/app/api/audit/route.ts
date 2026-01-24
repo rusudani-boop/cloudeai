@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runAudit } from '@/lib/audit/runAudit';
-import { fetchHtml, fetchRobotsTxt, checkSitemap, checkLlmsTxt, validateUrl } from '@/lib/fetch/fetchHtml';
+import { fetchHtml, fetchRobotsTxt, checkSitemap, checkLlmsTxt, validateUrl, checkLinksForRedirects } from '@/lib/fetch/fetchHtml';
 
 // Rate limiting
 const rateLimits = new Map<string, { count: number; ts: number }>();
@@ -59,20 +59,50 @@ export async function POST(request: NextRequest) {
     const result = await runAudit(html, finalUrl);
     result.fetchMethod = fetchMethod;
     
-    // Fetch robots.txt, sitemap, and llms.txt
+    // Fetch robots.txt, sitemap, llms.txt and check links for redirects
     if (fetchMethod === 'url') {
       try {
         const base = `${new URL(finalUrl).protocol}//${new URL(finalUrl).host}`;
+
+        // Parallel fetch of robots, sitemap, llms.txt
         const [robots, sitemap, llmsTxt] = await Promise.all([
           fetchRobotsTxt(base),
           checkSitemap(base),
           checkLlmsTxt(base)
         ]);
+
         if (robots) {
           result.technical.robotsTxt = { found: true, content: robots, blocksAll: robots.includes('Disallow: /'), hasSitemap: robots.toLowerCase().includes('sitemap:') };
         }
         result.technical.sitemap = sitemap;
         result.technical.llmsTxt = { found: llmsTxt.found, mentioned: result.technical.llmsTxt?.mentioned || false };
+
+        // Check internal links for redirects (limit to 10 for performance)
+        if (result.links.internalUrls && result.links.internalUrls.length > 0) {
+          const linksToCheck = result.links.internalUrls.map((l: { href: string }) => l.href);
+          const redirectResults = await checkLinksForRedirects(linksToCheck, 10);
+
+          if (redirectResults.length > 0) {
+            result.links.redirectLinks = redirectResults.length;
+            result.links.redirectList = redirectResults.map((r) => {
+              const linkInfo = result.links.internalUrls.find((l: { href: string }) => l.href === r.href);
+              return { href: r.href, text: linkInfo?.text || '', status: r.status, location: r.location };
+            });
+
+            // Add redirect issue to the issues list
+            result.issues.push({
+              id: 'redirect-links',
+              severity: 'medium' as const,
+              category: 'ბმულები',
+              issue: `${redirectResults.length} link(s) pointing to redirects (301/302)`,
+              issueGe: `${redirectResults.length} ბმული მიმართავს გადამისამართებაზე (301/302)`,
+              location: '<a href>',
+              fix: 'Update links to point directly to final URLs',
+              fixGe: 'განაახლეთ ბმულები საბოლოო URL-ებზე',
+              details: `საშუალო პრიორიტეტი. გადამისამართებები ანელებს გვერდის ჩატვირთვას და კარგავს PageRank-ს. ნაპოვნი: ${redirectResults.slice(0, 3).map(r => `${r.href} → ${r.status}`).join('; ')}`
+            });
+          }
+        }
       } catch {}
     }
     
