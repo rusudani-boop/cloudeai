@@ -42,6 +42,11 @@ export async function runAudit(
   const passed = collectPassed({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals });
   const score = calculateScore(issues, passed);
 
+  // Calculate actual checks performed (issues found + passed + base neutral checks)
+  // Base checks: items that are checked but may not appear in issues or passed (like optional hreflang)
+  const baseChecks = 15; // robots.txt, sitemap, performance metrics, security headers, etc.
+  const totalChecks = issues.length + passed.length + baseChecks;
+
   return {
     url: sourceUrl,
     score,
@@ -52,7 +57,7 @@ export async function runAudit(
       highIssues: issues.filter((i) => i.severity === 'high').length,
       mediumIssues: issues.filter((i) => i.severity === 'medium').length,
       lowIssues: issues.filter((i) => i.severity === 'low').length,
-      totalChecks: 75,
+      totalChecks,
       passedChecks: passed.length,
     },
     technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, issues, passed,
@@ -63,26 +68,62 @@ export async function runAudit(
 // FLESCH READING SCORE (Multi-language support)
 // ============================================
 
-function countSyllables(word: string): number {
+// Detect primary language of text
+function detectLanguage(text: string): 'ka' | 'ru' | 'de' | 'en' {
+  const sample = text.substring(0, 2000);
+
+  // Count Georgian characters (უნიკოდი: U+10A0 - U+10FF)
+  const georgianChars = (sample.match(/[\u10A0-\u10FF]/g) || []).length;
+
+  // Count Cyrillic characters (Russian: U+0400 - U+04FF)
+  const cyrillicChars = (sample.match(/[\u0400-\u04FF]/g) || []).length;
+
+  // Count German-specific characters and common German words
+  const germanUmlauts = (sample.match(/[äöüÄÖÜß]/g) || []).length;
+  const germanWords = (sample.toLowerCase().match(/\b(und|der|die|das|ist|sind|haben|werden|nicht|auch|für|mit|auf|dem|des|ein|eine|zu|von|bei|nach|über|vor|durch|unter|gegen|ohne|seit|während|wegen)\b/g) || []).length;
+
+  // Count Latin characters
+  const latinChars = (sample.match(/[a-zA-Z]/g) || []).length;
+
+  const total = georgianChars + cyrillicChars + latinChars;
+  if (total < 50) return 'en'; // Default to English if not enough text
+
+  // Georgian takes priority if significant presence
+  if (georgianChars > total * 0.3) return 'ka';
+
+  // Russian/Cyrillic
+  if (cyrillicChars > total * 0.3) return 'ru';
+
+  // German detection: umlauts OR common German words
+  if (germanUmlauts > 3 || germanWords > 5) return 'de';
+
+  return 'en';
+}
+
+// Count syllables based on detected language
+function countSyllables(word: string, lang: 'ka' | 'ru' | 'de' | 'en'): number {
   word = word.toLowerCase();
 
-  // Georgian vowels: ა, ე, ი, ო, უ
-  const georgianVowels = word.match(/[აეიოუ]/g);
-  if (georgianVowels && georgianVowels.length > 0) {
-    return Math.max(1, georgianVowels.length);
+  if (lang === 'ka') {
+    // Georgian vowels: ა, ე, ი, ო, უ
+    const vowels = word.match(/[აეიოუ]/g);
+    return vowels ? Math.max(1, vowels.length) : 1;
   }
 
-  // Russian/Cyrillic vowels: а, е, ё, и, о, у, ы, э, ю, я
-  const russianVowels = word.match(/[аеёиоуыэюя]/g);
-  if (russianVowels && russianVowels.length > 0) {
-    return Math.max(1, russianVowels.length);
+  if (lang === 'ru') {
+    // Russian vowels: а, е, ё, и, о, у, ы, э, ю, я
+    const vowels = word.match(/[аеёиоуыэюя]/g);
+    return vowels ? Math.max(1, vowels.length) : 1;
   }
 
-  // German vowels (including umlauts): a, e, i, o, u, ä, ö, ü
-  const germanWord = word.replace(/[^a-zäöüß]/g, '');
-  if (germanWord && /[äöüß]/.test(germanWord)) {
-    const germanVowels = germanWord.match(/[aeiouäöü]/g);
-    return germanVowels ? Math.max(1, germanVowels.length) : 1;
+  if (lang === 'de') {
+    // German vowels including umlauts
+    const cleanWord = word.replace(/[^a-zäöüß]/g, '');
+    if (!cleanWord) return 1;
+    // German diphthongs count as 1 syllable: ei, ie, eu, äu, au
+    let processed = cleanWord.replace(/ei|ie|eu|äu|au/g, 'X');
+    const vowels = processed.match(/[aeiouäöüX]/g);
+    return vowels ? Math.max(1, vowels.length) : 1;
   }
 
   // English syllable counting
@@ -97,8 +138,11 @@ function calculateReadability(text: string): ReadabilityData {
   // Clean the text - remove extra whitespace and non-content
   const cleanText = text.replace(/\s+/g, ' ').trim();
 
-  // Split sentences - handle Georgian and English punctuation
-  const sentences = cleanText.split(/[.!?։।]+/).filter((s) => s.trim().length > 10);
+  // Detect language first
+  const lang = detectLanguage(cleanText);
+
+  // Split sentences - handle various punctuation
+  const sentences = cleanText.split(/[.!?։।;]+/).filter((s) => s.trim().length > 10);
   const totalSentences = Math.max(sentences.length, 1);
 
   // Get words - filter out very short tokens
@@ -106,7 +150,6 @@ function calculateReadability(text: string): ReadabilityData {
   const totalWords = words.length;
 
   if (totalWords < 10) {
-    // Not enough content for meaningful analysis
     return {
       fleschScore: 0,
       fleschGrade: 'არასაკმარისი კონტენტი',
@@ -118,7 +161,7 @@ function calculateReadability(text: string): ReadabilityData {
 
   let totalSyllables = 0, complexWords = 0;
   words.forEach((word) => {
-    const syllables = countSyllables(word);
+    const syllables = countSyllables(word, lang);
     totalSyllables += syllables;
     if (syllables >= 3) complexWords++;
   });
@@ -127,9 +170,19 @@ function calculateReadability(text: string): ReadabilityData {
   const avgSyllablesPerWord = totalWords > 0 ? totalSyllables / totalWords : 0;
   const complexWordPercentage = totalWords > 0 ? (complexWords / totalWords) * 100 : 0;
 
-  // Flesch Reading Ease formula
-  // Score 90-100: Very Easy, 0-30: Very Difficult
-  let fleschScore = 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord;
+  // Language-specific Flesch formulas
+  let fleschScore: number;
+  if (lang === 'de') {
+    // German Flesch formula (Amstad)
+    fleschScore = 180 - avgSentenceLength - (58.5 * avgSyllablesPerWord);
+  } else if (lang === 'ka' || lang === 'ru') {
+    // Adapted formula for Georgian/Russian (syllable-based languages)
+    // These languages have more syllables per word on average
+    fleschScore = 206.835 - (1.3 * avgSentenceLength) - (60.1 * avgSyllablesPerWord);
+  } else {
+    // English Flesch formula
+    fleschScore = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
+  }
 
   // Clamp to 0-100 range
   fleschScore = Math.max(0, Math.min(100, fleschScore));
