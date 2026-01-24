@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runAudit } from '@/lib/audit/runAudit';
-import { fetchHtml, fetchRobotsTxt, checkSitemap, validateUrl } from '@/lib/fetch/fetchHtml';
+import { fetchHtml, fetchRobotsTxt, checkSitemap, checkLlmsTxt, validateUrl } from '@/lib/fetch/fetchHtml';
 
 // Rate limiting
 const rateLimits = new Map<string, { count: number; ts: number }>();
@@ -59,15 +59,20 @@ export async function POST(request: NextRequest) {
     const result = await runAudit(html, finalUrl);
     result.fetchMethod = fetchMethod;
     
-    // Fetch robots.txt and sitemap
+    // Fetch robots.txt, sitemap, and llms.txt
     if (fetchMethod === 'url') {
       try {
         const base = `${new URL(finalUrl).protocol}//${new URL(finalUrl).host}`;
-        const [robots, sitemap] = await Promise.all([fetchRobotsTxt(base), checkSitemap(base)]);
+        const [robots, sitemap, llmsTxt] = await Promise.all([
+          fetchRobotsTxt(base),
+          checkSitemap(base),
+          checkLlmsTxt(base)
+        ]);
         if (robots) {
           result.technical.robotsTxt = { found: true, content: robots, blocksAll: robots.includes('Disallow: /'), hasSitemap: robots.toLowerCase().includes('sitemap:') };
         }
         result.technical.sitemap = sitemap;
+        result.technical.llmsTxt = { found: llmsTxt.found, mentioned: result.technical.llmsTxt?.mentioned || false };
       } catch {}
     }
     
