@@ -79,3 +79,15 @@ export async function checkSitemap(baseUrl: string): Promise<{ found: boolean; u
     return { found, url: found ? url : null };
   } catch { return { found: false, url: null }; }
 }
+
+export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; content: string | null }> {
+  try {
+    const url = new URL('/llms.txt', baseUrl).href;
+    const result = await fetchHtml(url, 5000);
+    // llms.txt should return 200 and contain text (not HTML error page)
+    if (result.status === 200 && !result.html.includes('<html') && !result.html.includes('<!DOCTYPE')) {
+      return { found: true, content: result.html.substring(0, 500) };
+    }
+    return { found: false, content: null };
+  } catch { return { found: false, content: null }; }
+}

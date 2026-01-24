@@ -1,16 +1,13 @@
 // lib/checks/patterns.ts
 
 export const PATTERNS = {
-  // Broken href patterns
-  BROKEN_HREFS: [
+  // Empty/invalid href patterns (NOT including # - anchor links are valid!)
+  EMPTY_HREFS: [
     '',
-    '#',
     'javascript:void(0)',
     'javascript:void(0);',
     'javascript:;',
     'javascript:',
-    '#!',
-    '#/',
     'about:blank',
   ],
 
