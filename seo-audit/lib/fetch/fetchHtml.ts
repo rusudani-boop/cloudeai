@@ -87,19 +87,32 @@ export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; c
   for (const path of paths) {
     try {
       const url = new URL(path, baseUrl).href;
-      const result = await fetchHtml(url, 5000);
+      const result = await fetchHtml(url, 8000); // Increased timeout
 
-      // llms.txt should return 200 and contain text (not HTML error page)
-      // Check that it's not an HTML page (could be a custom 404 page with 200 status)
       const content = result.html.trim();
       const lowerContent = content.toLowerCase();
 
-      if (result.status === 200 &&
-          content.length > 0 &&
-          !lowerContent.startsWith('<!doctype') &&
-          !lowerContent.startsWith('<html') &&
-          !lowerContent.includes('<head>') &&
-          !lowerContent.includes('<body>')) {
+      // Skip if clearly an HTML page
+      if (lowerContent.startsWith('<!doctype') || lowerContent.startsWith('<html')) {
+        continue;
+      }
+
+      // Check for llms.txt indicators
+      const hasLlmsTxtIndicators =
+        content.startsWith('#') || // Starts with comment
+        lowerContent.includes('# llms') ||
+        lowerContent.includes('# name:') ||
+        lowerContent.includes('# description:') ||
+        lowerContent.includes('llm') ||
+        lowerContent.includes('language model') ||
+        lowerContent.includes('ai ') ||
+        (content.includes('http') && !content.includes('<a ')) || // Contains URLs but not HTML links
+        /^[#\w\s\-:.,\/@]+$/m.test(content.substring(0, 200)); // Plain text format
+
+      // Valid if: status 200, has content, and either has llms indicators OR is plain text (no HTML tags)
+      const isPlainText = !lowerContent.includes('<head>') && !lowerContent.includes('<body>') && !lowerContent.includes('</div>');
+
+      if (result.status === 200 && content.length > 10 && (hasLlmsTxtIndicators || isPlainText)) {
         return { found: true, content: content.substring(0, 500) };
       }
     } catch {
