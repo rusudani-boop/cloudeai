@@ -81,13 +81,31 @@ export async function checkSitemap(baseUrl: string): Promise<{ found: boolean; u
 }
 
 export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; content: string | null }> {
-  try {
-    const url = new URL('/llms.txt', baseUrl).href;
-    const result = await fetchHtml(url, 5000);
-    // llms.txt should return 200 and contain text (not HTML error page)
-    if (result.status === 200 && !result.html.includes('<html') && !result.html.includes('<!DOCTYPE')) {
-      return { found: true, content: result.html.substring(0, 500) };
+  // Try multiple common llms.txt locations
+  const paths = ['/llms.txt', '/llms-full.txt', '/.well-known/llms.txt'];
+
+  for (const path of paths) {
+    try {
+      const url = new URL(path, baseUrl).href;
+      const result = await fetchHtml(url, 5000);
+
+      // llms.txt should return 200 and contain text (not HTML error page)
+      // Check that it's not an HTML page (could be a custom 404 page with 200 status)
+      const content = result.html.trim();
+      const lowerContent = content.toLowerCase();
+
+      if (result.status === 200 &&
+          content.length > 0 &&
+          !lowerContent.startsWith('<!doctype') &&
+          !lowerContent.startsWith('<html') &&
+          !lowerContent.includes('<head>') &&
+          !lowerContent.includes('<body>')) {
+        return { found: true, content: content.substring(0, 500) };
+      }
+    } catch {
+      // Try next path
     }
-    return { found: false, content: null };
-  } catch { return { found: false, content: null }; }
+  }
+
+  return { found: false, content: null };
 }
