@@ -109,3 +109,50 @@ export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; c
 
   return { found: false, content: null };
 }
+
+// Check if a URL returns a redirect (301, 302, 307, 308)
+export async function checkRedirect(url: string, timeout = 3000): Promise<{ isRedirect: boolean; status: number; location: string | null }> {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(url);
+      const isHttps = parsed.protocol === 'https:';
+      const lib = isHttps ? https : http;
+
+      const req = lib.request({
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: parsed.pathname + parsed.search,
+        method: 'HEAD',
+        timeout,
+        headers: { ...HEADERS, Host: parsed.hostname },
+      }, (res) => {
+        const status = res.statusCode || 0;
+        const isRedirect = status >= 300 && status < 400;
+        resolve({ isRedirect, status, location: res.headers.location || null });
+      });
+
+      req.on('error', () => resolve({ isRedirect: false, status: 0, location: null }));
+      req.on('timeout', () => { req.destroy(); resolve({ isRedirect: false, status: 0, location: null }); });
+      req.end();
+    } catch {
+      resolve({ isRedirect: false, status: 0, location: null });
+    }
+  });
+}
+
+// Check multiple links for redirects (limited to first N links for performance)
+export async function checkLinksForRedirects(links: string[], limit = 10): Promise<{ href: string; status: number; location: string }[]> {
+  const redirectLinks: { href: string; status: number; location: string }[] = [];
+  const linksToCheck = links.slice(0, limit);
+
+  const results = await Promise.all(linksToCheck.map(async (href) => {
+    const result = await checkRedirect(href);
+    if (result.isRedirect && result.location) {
+      return { href, status: result.status, location: result.location };
+    }
+    return null;
+  }));
+
+  results.forEach((r) => { if (r) redirectLinks.push(r); });
+  return redirectLinks;
+}

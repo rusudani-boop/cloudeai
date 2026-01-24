@@ -449,11 +449,18 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
 
 function analyzeLinks(doc: Document, sourceUrl: string) {
   const links = Array.from(doc.querySelectorAll('a[href]'));
-  const sourceHost = sourceUrl ? new URL(sourceUrl).hostname : '';
+  let sourceHost = '';
+  let baseUrl = '';
+  try {
+    const parsed = new URL(sourceUrl);
+    sourceHost = parsed.hostname;
+    baseUrl = `${parsed.protocol}//${parsed.host}`;
+  } catch {}
 
   let internal = 0, external = 0, broken = 0, genericAnchors = 0, nofollow = 0, sponsored = 0, ugc = 0, unsafeExternalCount = 0;
   const brokenList: { href: string; text: string }[] = [];
   const genericAnchorsList: { text: string; href: string }[] = [];
+  const internalUrls: { href: string; text: string }[] = []; // For redirect checking
 
   links.forEach((a) => {
     const href = a.getAttribute('href') || '';
@@ -461,8 +468,31 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     const rel = a.getAttribute('rel') || '';
 
     if (PATTERNS.EMPTY_HREFS.includes(href)) { broken++; brokenList.push({ href: href || '(empty)', text: text.substring(0, 50) }); }
-    if (href.startsWith('http')) { try { if (new URL(href).hostname === sourceHost) internal++; else external++; } catch {} }
-    else if (href.startsWith('/') || href.startsWith('./') || (!href.includes(':') && href)) internal++;
+
+    // Track internal vs external and collect full internal URLs
+    let isInternal = false;
+    let fullUrl = '';
+    if (href.startsWith('http')) {
+      try {
+        const linkHost = new URL(href).hostname;
+        if (linkHost === sourceHost) { isInternal = true; fullUrl = href; }
+        else external++;
+      } catch {}
+    } else if (href.startsWith('/')) {
+      isInternal = true;
+      fullUrl = baseUrl + href;
+    } else if (href.startsWith('./') || (!href.includes(':') && href && !href.startsWith('#'))) {
+      isInternal = true;
+      try { fullUrl = new URL(href, sourceUrl).href; } catch {}
+    }
+
+    if (isInternal) {
+      internal++;
+      if (fullUrl && !href.includes('#') && internalUrls.length < 20) {
+        internalUrls.push({ href: fullUrl, text: text.substring(0, 50) });
+      }
+    }
+
     if (PATTERNS.GENERIC_ANCHORS.includes(text)) { genericAnchors++; genericAnchorsList.push({ text, href: href.substring(0, 50) }); }
     if (rel.includes('nofollow')) nofollow++;
     if (rel.includes('sponsored')) sponsored++;
@@ -470,7 +500,14 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     if (a.getAttribute('target') === '_blank' && !rel.includes('noopener')) unsafeExternalCount++;
   });
 
-  return { total: links.length, internal, external, broken, brokenList: brokenList.slice(0, 10), genericAnchors, genericAnchorsList: genericAnchorsList.slice(0, 10), nofollow, sponsored, ugc, unsafeExternalCount, hasFooterLinks: !!doc.querySelector('footer a'), hasNavLinks: !!doc.querySelector('nav a') };
+  return {
+    total: links.length, internal, external, broken, brokenList: brokenList.slice(0, 10),
+    genericAnchors, genericAnchorsList: genericAnchorsList.slice(0, 10),
+    nofollow, sponsored, ugc, unsafeExternalCount,
+    hasFooterLinks: !!doc.querySelector('footer a'), hasNavLinks: !!doc.querySelector('nav a'),
+    internalUrls: internalUrls.slice(0, 15), // For redirect checking
+    redirectLinks: 0, redirectList: [] as { href: string; text: string; status: number; location: string }[]
+  };
 }
 
 // ============================================

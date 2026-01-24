@@ -388,6 +388,23 @@ export default function SEOChecker() {
                           </div>
                         )}
 
+                        {/* Show redirect links */}
+                        {issue.id === 'redirect-links' && results.links.redirectList && results.links.redirectList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">გადამისამართებული ბმულები:</div>
+                            {results.links.redirectList.map((link: {href: string; text: string; status: number; location: string}, j: number) => (
+                              <div key={j} className="flex flex-col gap-1">
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-yellow-600">•</span>
+                                  <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
+                                  <span className="text-orange-600 font-medium">{link.status}</span>
+                                </div>
+                                <div className="ml-4 opacity-60 truncate">→ {link.location}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Show mixed content URLs */}
                         {issue.id === 'mixed-content' && results.security.mixedContentUrls && results.security.mixedContentUrls.length > 0 && (
                           <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
