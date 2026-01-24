@@ -403,6 +403,9 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
 
   const readability = calculateReadability(bodyText);
 
+  // Detect actual content language
+  const detectedLanguage = detectLanguage(bodyText);
+
   const wordFreq: Record<string, number> = {};
   words.forEach((w) => {
     const word = w.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -410,7 +413,7 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
   });
   const keywordDensity = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count, percentage: Math.round((count / wordCount) * 10000) / 100 }));
 
-  return { headings, wordCount, characterCount, sentenceCount: sentences.length, paragraphCount: paragraphs.length, readingTime, titleH1Duplicate, duplicateParagraphs, aiScore, aiPhrases, readability, keywordDensity };
+  return { headings, wordCount, characterCount, sentenceCount: sentences.length, paragraphCount: paragraphs.length, readingTime, titleH1Duplicate, duplicateParagraphs, aiScore, aiPhrases, readability, keywordDensity, detectedLanguage };
 }
 
 // ============================================
@@ -458,7 +461,26 @@ function analyzeImages(doc: Document) {
   const srcsetCount = images.filter((img) => img.hasAttribute('srcset')).length;
   const modernFormats = images.filter((img) => { const src = img.getAttribute('src') || ''; return src.includes('.webp') || src.includes('.avif'); }).length;
 
-  return { total: images.length, withoutAlt, withEmptyAlt, withoutDimensions, lazyLoaded, lazyAboveFold, clickableWithoutAlt, decorativeCount: withEmptyAlt, largeImages: images.length - srcsetCount, modernFormats, srcsetCount };
+  // Check for broken/invalid image sources
+  const brokenImages: { src: string; alt: string }[] = [];
+  images.forEach((img) => {
+    const src = img.getAttribute('src') || '';
+    const alt = img.getAttribute('alt') || '(no alt)';
+    // Check for empty, invalid, or placeholder sources
+    if (!src || src === '#' || src === 'undefined' || src === 'null' ||
+        src.startsWith('data:,') || src === 'about:blank' ||
+        (src.startsWith('data:') && src.length < 50)) {
+      brokenImages.push({ src: src || '(empty)', alt: alt.substring(0, 30) });
+    }
+  });
+
+  return {
+    total: images.length, withoutAlt, withEmptyAlt, withoutDimensions, lazyLoaded, lazyAboveFold,
+    clickableWithoutAlt, decorativeCount: withEmptyAlt, largeImages: images.length - srcsetCount,
+    modernFormats, srcsetCount,
+    brokenCount: brokenImages.length,
+    brokenList: brokenImages.slice(0, 10)
+  };
 }
 
 // ============================================
@@ -668,6 +690,29 @@ function collectIssues(data: any): AuditIssue[] {
   if (!technical.language) issues.push({ id: 'no-lang', severity: 'high', category: 'ხელმისაწვდომობა', issue: 'Missing lang attribute on <html>', issueGe: 'lang ატრიბუტი არ არის', location: '<html>', fix: 'Add lang="ka" or appropriate language code', fixGe: 'დაამატეთ lang="ka" ან შესაბამისი კოდი', details: `${SEVERITY_PHRASES.high} lang ატრიბუტი ეხმარება ბრაუზერს და სკრინრიდერებს ენის განსაზღვრაში. ასევე მნიშვნელოვანია საერთაშორისო SEO-სთვის.` });
   if (!technical.charset) issues.push({ id: 'no-charset', severity: 'medium', category: 'ტექნიკური', issue: 'Missing charset declaration', issueGe: 'Charset დეკლარაცია არ არის', location: '<head>', fix: 'Add <meta charset="UTF-8">', fixGe: 'დაამატეთ <meta charset="UTF-8">', details: `${SEVERITY_PHRASES.medium} Charset განსაზღვრავს სიმბოლოების კოდირებას. UTF-8 საჭიროა ქართული და სხვა უნიკოდ სიმბოლოებისთვის.` });
 
+  // Content language vs declared lang attribute mismatch
+  if (technical.language && content.detectedLanguage) {
+    const declaredLang = technical.language.toLowerCase().split('-')[0]; // e.g., "en-US" -> "en"
+    const langMap: Record<string, string[]> = {
+      'ka': ['ka'], 'ru': ['ru'], 'de': ['de'], 'en': ['en']
+    };
+    const expectedLangs = langMap[content.detectedLanguage] || ['en'];
+    if (!expectedLangs.includes(declaredLang)) {
+      const langNames: Record<string, string> = { 'ka': 'ქართული', 'ru': 'რუსული', 'de': 'გერმანული', 'en': 'ინგლისური' };
+      issues.push({
+        id: 'lang-content-mismatch',
+        severity: 'high',
+        category: 'საერთაშორისო',
+        issue: `Content language mismatch: declared "${technical.language}" but content is ${content.detectedLanguage}`,
+        issueGe: `კონტენტის ენა არ ემთხვევა: დეკლარირებულია "${technical.language}", მაგრამ კონტენტი არის ${langNames[content.detectedLanguage] || content.detectedLanguage}`,
+        location: '<html lang>',
+        fix: `Change lang="${technical.language}" to lang="${content.detectedLanguage}"`,
+        fixGe: `შეცვალეთ lang="${technical.language}" -> lang="${content.detectedLanguage}"`,
+        details: `${SEVERITY_PHRASES.high} გვერდის კონტენტი ${langNames[content.detectedLanguage] || content.detectedLanguage} ენაზეა, მაგრამ HTML lang ატრიბუტი მიუთითებს "${technical.language}"-ზე. ეს აბნევს საძიებო სისტემებს და სკრინრიდერებს.`
+      });
+    }
+  }
+
   // Robots
   if (technical.robots.hasNoindex) issues.push({ id: 'noindex', severity: 'critical', category: 'ტექნიკური', issue: 'Page blocked from indexing (noindex)', issueGe: 'გვერდი დაბლოკილია ინდექსაციისთვის', location: '<meta name="robots">', fix: 'Remove noindex if page should be indexed', fixGe: 'წაშალეთ noindex თუ გვერდი უნდა დაინდექსდეს', details: `${SEVERITY_PHRASES.critical} noindex მეტა ტეგი ბლოკავს გვერდის ინდექსაციას Google-ში. გვერდი არ გამოჩნდება ძიების შედეგებში!` });
 
@@ -697,6 +742,7 @@ function collectIssues(data: any): AuditIssue[] {
   // Images
   if (images.withoutAlt > 0) issues.push({ id: 'img-no-alt', severity: images.withoutAlt > 5 ? 'high' : 'medium', category: 'ხელმისაწვდომობა', issue: `${images.withoutAlt} image(s) missing alt text`, issueGe: `${images.withoutAlt} სურათს არ აქვს alt ტექსტი`, location: '<img>', fix: 'Add descriptive alt text to all images', fixGe: 'დაამატეთ აღწერითი alt ტექსტი', details: `${images.withoutAlt > 5 ? SEVERITY_PHRASES.high : SEVERITY_PHRASES.medium} ${images.withoutAlt} სურათს აკლია alt ატრიბუტი. Alt ტექსტი აუცილებელია ხელმისაწვდომობისთვის და სურათების SEO-სთვის.` });
   if (images.withoutDimensions > 0) issues.push({ id: 'img-no-dim', severity: 'medium', category: 'სიჩქარე', issue: `${images.withoutDimensions} image(s) without dimensions`, issueGe: `${images.withoutDimensions} სურათს არ აქვს ზომები`, location: '<img>', fix: 'Add width and height attributes', fixGe: 'დაამატეთ width და height ატრიბუტები', details: `${SEVERITY_PHRASES.medium} სურათების ზომების მითითება ხელს უშლის CLS (Cumulative Layout Shift) პრობლემას და აუმჯობესებს Core Web Vitals.` });
+  if (images.brokenCount > 0) issues.push({ id: 'broken-images', severity: 'high', category: 'სურათები', issue: `${images.brokenCount} broken/invalid image(s) found`, issueGe: `${images.brokenCount} გატეხილი/არასწორი სურათი`, location: '<img src="">', fix: 'Fix or remove broken image sources', fixGe: 'გაასწორეთ ან წაშალეთ გატეხილი სურათები', details: `${SEVERITY_PHRASES.high} ნაპოვნი გატეხილი სურათები: ${images.brokenList.slice(0, 5).map((img: any) => `"${img.alt}" (src: ${img.src})`).join('; ')}. ცარიელი ან არასწორი src აუარესებს UX-ს.` });
   if (images.lazyAboveFold > 0) issues.push({ id: 'lazy-above-fold', severity: 'medium', category: 'სიჩქარე', issue: `${images.lazyAboveFold} above-fold image(s) with lazy loading`, issueGe: `${images.lazyAboveFold} ზედა სურათს აქვს lazy loading`, location: '<img loading="lazy">', fix: 'Remove lazy loading from above-fold images', fixGe: 'წაშალეთ lazy loading ზედა სურათებიდან', details: `${SEVERITY_PHRASES.medium} პირველი 1-3 სურათი (above-fold) არ უნდა იყოს lazy-loaded, რადგან ეს ანელებს LCP-ს (Largest Contentful Paint).` });
 
   // Links
