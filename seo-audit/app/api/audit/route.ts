@@ -2,7 +2,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runAudit } from '@/lib/audit/runAudit';
-import { fetchHtml, fetchRobotsTxt, checkSitemap, checkLlmsTxt, validateUrl, checkLinksForRedirects } from '@/lib/fetch/fetchHtml';
+import {
+  fetchHtml,
+  fetchRobotsTxt,
+  checkSitemap,
+  checkLlmsTxt,
+  validateUrl,
+  checkLinksForRedirects,
+  checkExternalLinks,
+  checkSSLCertificate,
+  checkSecurityHeaders,
+  checkUrlInSitemap,
+  checkImageSize
+} from '@/lib/fetch/fetchHtml';
 
 // Rate limiting
 const rateLimits = new Map<string, { count: number; ts: number }>();
@@ -100,6 +112,168 @@ export async function POST(request: NextRequest) {
               fix: 'Update links to point directly to final URLs',
               fixGe: 'განაახლეთ ბმულები საბოლოო URL-ებზე',
               details: `საშუალო პრიორიტეტი. გადამისამართებები ანელებს გვერდის ჩატვირთვას და კარგავს PageRank-ს. ნაპოვნი: ${redirectResults.slice(0, 3).map(r => `${r.href} → ${r.status}`).join('; ')}`
+            });
+          }
+        }
+
+        // Check external links for 404 errors (limit to 15 for performance)
+        if (result.links.externalUrls && result.links.externalUrls.length > 0) {
+          const externalUrls = result.links.externalUrls.map((l: { href: string }) => l.href);
+          const brokenExternalLinks = await checkExternalLinks(externalUrls, 15);
+
+          if (brokenExternalLinks.length > 0) {
+            result.links.brokenExternalLinks = brokenExternalLinks.length;
+            result.links.brokenExternalList = brokenExternalLinks.map((r) => {
+              const linkInfo = result.links.externalUrls.find((l: { href: string }) => l.href === r.href);
+              return { href: r.href, text: linkInfo?.text || '', status: r.status, error: r.error };
+            });
+
+            result.issues.push({
+              id: 'broken-external-links',
+              severity: 'high' as const,
+              category: 'ბმულები',
+              issue: `${brokenExternalLinks.length} external link(s) are broken (404/error)`,
+              issueGe: `${brokenExternalLinks.length} გარე ბმული გატეხილია (404/შეცდომა)`,
+              location: '<a href>',
+              fix: 'Remove or update broken external links',
+              fixGe: 'წაშალეთ ან განაახლეთ გატეხილი გარე ბმულები',
+              details: `მაღალი პრიორიტეტი. გატეხილი გარე ბმულები აუარესებს მომხმარებლის გამოცდილებას და SEO-ს. ნაპოვნი: ${brokenExternalLinks.slice(0, 3).map(r => `${r.href} → ${r.status || r.error}`).join('; ')}`
+            });
+          }
+        }
+
+        // Check SSL certificate
+        const sslResult = await checkSSLCertificate(finalUrl);
+        result.security.ssl = {
+          valid: sslResult.valid,
+          issuer: sslResult.issuer,
+          validFrom: sslResult.validFrom,
+          validTo: sslResult.validTo,
+          daysUntilExpiry: sslResult.daysUntilExpiry,
+          error: sslResult.error
+        };
+
+        if (!sslResult.valid) {
+          result.issues.push({
+            id: 'ssl-invalid',
+            severity: 'critical' as const,
+            category: 'უსაფრთხოება',
+            issue: `SSL certificate issue: ${sslResult.error || 'Invalid or expired'}`,
+            issueGe: `SSL სერტიფიკატის პრობლემა: ${sslResult.error || 'არავალიდური ან ვადაგასული'}`,
+            location: 'HTTPS',
+            fix: 'Renew or fix SSL certificate',
+            fixGe: 'განაახლეთ ან გაასწორეთ SSL სერტიფიკატი',
+            details: `კრიტიკული პრიორიტეტი. SSL სერტიფიკატი არავალიდურია ან ვადაგასულია.`
+          });
+        } else if (sslResult.daysUntilExpiry !== undefined && sslResult.daysUntilExpiry < 30) {
+          result.issues.push({
+            id: 'ssl-expiring-soon',
+            severity: 'high' as const,
+            category: 'უსაფრთხოება',
+            issue: `SSL certificate expires in ${sslResult.daysUntilExpiry} days`,
+            issueGe: `SSL სერტიფიკატი იწურება ${sslResult.daysUntilExpiry} დღეში`,
+            location: 'HTTPS',
+            fix: 'Renew SSL certificate before expiry',
+            fixGe: 'განაახლეთ SSL სერტიფიკატი ვადის გასვლამდე',
+            details: `მაღალი პრიორიტეტი. SSL სერტიფიკატი იწურება ${sslResult.validTo}-ზე. გასდეთ ${sslResult.issuer || 'გამცემი'}.`
+          });
+        }
+
+        // Check security headers
+        const securityHeadersResult = await checkSecurityHeaders(finalUrl);
+        result.security.securityHeaders = {
+          headers: securityHeadersResult.headers,
+          score: securityHeadersResult.score,
+          issues: securityHeadersResult.issues
+        };
+
+        if (securityHeadersResult.issues.length > 0) {
+          result.issues.push({
+            id: 'security-headers-missing',
+            severity: 'medium' as const,
+            category: 'უსაფრთხოება',
+            issue: `Missing ${securityHeadersResult.issues.length} security headers`,
+            issueGe: `აკლია ${securityHeadersResult.issues.length} უსაფრთხოების ჰედერი`,
+            location: 'HTTP Headers',
+            fix: 'Add missing security headers to server config',
+            fixGe: 'დაამატეთ აკლებული უსაფრთხოების ჰედერები სერვერის კონფიგურაციაში',
+            details: `საშუალო პრიორიტეტი. უსაფრთხოების ქულა: ${securityHeadersResult.score}/100. აკლია: ${securityHeadersResult.issues.join(', ')}`
+          });
+        }
+
+        // Check if current page is in sitemap
+        if (sitemap.found && sitemap.url) {
+          const sitemapCheck = await checkUrlInSitemap(sitemap.url, finalUrl);
+          result.technical.sitemap.urlCount = sitemapCheck.urlCount;
+          result.technical.sitemap.pageInSitemap = sitemapCheck.found;
+
+          if (!sitemapCheck.found) {
+            result.issues.push({
+              id: 'page-not-in-sitemap',
+              severity: 'medium' as const,
+              category: 'ტექნიკური',
+              issue: 'Current page is not in sitemap.xml',
+              issueGe: 'მიმდინარე გვერდი არ არის sitemap.xml-ში',
+              location: 'sitemap.xml',
+              fix: 'Add page URL to sitemap.xml',
+              fixGe: 'დაამატეთ გვერდის URL sitemap.xml-ში',
+              details: `საშუალო პრიორიტეტი. გვერდი არ არის ნაპოვნი sitemap.xml-ში (${sitemapCheck.urlCount} URL სულ). sitemap-ში არსებობა აუმჯობესებს ინდექსაციას.`
+            });
+          }
+        }
+
+        // Check image sizes (for large images)
+        if (result.images.imageUrls && result.images.imageUrls.length > 0) {
+          const imageChecks = await Promise.all(
+            result.images.imageUrls.slice(0, 10).map(async (img: { src: string; alt: string }) => {
+              const sizeInfo = await checkImageSize(img.src);
+              return { ...img, ...sizeInfo };
+            })
+          );
+
+          const largeImages = imageChecks.filter((img) => img.size && img.size > 200 * 1024); // > 200KB
+          const oldFormatImages = imageChecks.filter((img) => img.type && !img.type.includes('webp') && !img.type.includes('avif'));
+
+          result.images.imageSizeAnalysis = {
+            checked: imageChecks.length,
+            largeCount: largeImages.length,
+            oldFormatCount: oldFormatImages.length,
+            largeList: largeImages.map((img) => ({
+              src: img.src,
+              size: img.size ? `${Math.round(img.size / 1024)}KB` : 'unknown',
+              type: img.type
+            })),
+            oldFormatList: oldFormatImages.map((img) => ({
+              src: img.src,
+              type: img.type
+            }))
+          };
+
+          if (largeImages.length > 0) {
+            result.issues.push({
+              id: 'large-images',
+              severity: 'medium' as const,
+              category: 'სურათები',
+              issue: `${largeImages.length} image(s) larger than 200KB`,
+              issueGe: `${largeImages.length} სურათი 200KB-ზე მეტია`,
+              location: '<img src>',
+              fix: 'Compress images or use responsive sizes',
+              fixGe: 'შეკუმშეთ სურათები ან გამოიყენეთ რესპონსიული ზომები',
+              details: `საშუალო პრიორიტეტი. დიდი სურათები ანელებს გვერდის ჩატვირთვას. მაგ: ${largeImages.slice(0, 2).map(img => `${img.src.split('/').pop()} (${Math.round((img.size || 0) / 1024)}KB)`).join(', ')}`
+            });
+          }
+
+          if (oldFormatImages.length > 0) {
+            result.issues.push({
+              id: 'old-image-formats',
+              severity: 'low' as const,
+              category: 'სურათები',
+              issue: `${oldFormatImages.length} image(s) using old formats (not WebP/AVIF)`,
+              issueGe: `${oldFormatImages.length} სურათი იყენებს ძველ ფორმატებს (არა WebP/AVIF)`,
+              location: '<img src>',
+              fix: 'Convert images to WebP or AVIF format',
+              fixGe: 'გადაიყვანეთ სურათები WebP ან AVIF ფორმატში',
+              details: `დაბალი პრიორიტეტი. WebP და AVIF ფორმატები 25-50%-ით პატარაა იგივე ხარისხზე.`
             });
           }
         }

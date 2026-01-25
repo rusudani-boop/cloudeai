@@ -490,6 +490,7 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
   const brokenList: { href: string; text: string }[] = [];
   const genericAnchorsList: { text: string; href: string }[] = [];
   const internalUrls: { href: string; text: string }[] = []; // For redirect checking
+  const externalUrls: { href: string; text: string }[] = []; // For 404 checking
 
   links.forEach((a) => {
     const href = a.getAttribute('href') || '';
@@ -504,8 +505,16 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     if (href.startsWith('http')) {
       try {
         const linkHost = new URL(href).hostname;
-        if (linkHost === sourceHost) { isInternal = true; fullUrl = href; }
-        else external++;
+        if (linkHost === sourceHost) {
+          isInternal = true;
+          fullUrl = href;
+        } else {
+          external++;
+          // Collect external URLs for 404 checking
+          if (externalUrls.length < 20) {
+            externalUrls.push({ href, text: text.substring(0, 50) });
+          }
+        }
       } catch {}
     } else if (href.startsWith('/')) {
       isInternal = true;
@@ -535,7 +544,9 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     nofollow, sponsored, ugc, unsafeExternalCount,
     hasFooterLinks: !!doc.querySelector('footer a'), hasNavLinks: !!doc.querySelector('nav a'),
     internalUrls: internalUrls.slice(0, 15), // For redirect checking
-    redirectLinks: 0, redirectList: [] as { href: string; text: string; status: number; location: string }[]
+    externalUrls: externalUrls.slice(0, 20), // For 404 checking
+    redirectLinks: 0, redirectList: [] as { href: string; text: string; status: number; location: string }[],
+    brokenExternalLinks: 0, brokenExternalList: [] as { href: string; text: string; status: number; error?: string }[]
   };
 }
 
@@ -556,6 +567,9 @@ function analyzeImages(doc: Document) {
 
   // Check for broken/invalid image sources
   const brokenImages: { src: string; alt: string }[] = [];
+  // Collect image URLs for size checking
+  const imageUrls: { src: string; alt: string }[] = [];
+
   images.forEach((img) => {
     const src = img.getAttribute('src') || '';
     const alt = img.getAttribute('alt') || '(no alt)';
@@ -564,6 +578,9 @@ function analyzeImages(doc: Document) {
         src.startsWith('data:,') || src === 'about:blank' ||
         (src.startsWith('data:') && src.length < 50)) {
       brokenImages.push({ src: src || '(empty)', alt: alt.substring(0, 30) });
+    } else if (src.startsWith('http') && imageUrls.length < 15) {
+      // Collect external image URLs for size checking
+      imageUrls.push({ src, alt: alt.substring(0, 30) });
     }
   });
 
@@ -572,7 +589,8 @@ function analyzeImages(doc: Document) {
     clickableWithoutAlt, decorativeCount: withEmptyAlt, largeImages: images.length - srcsetCount,
     modernFormats, srcsetCount,
     brokenCount: brokenImages.length,
-    brokenList: brokenImages.slice(0, 10)
+    brokenList: brokenImages.slice(0, 10),
+    imageUrls: imageUrls.slice(0, 15) // For size checking
   };
 }
 

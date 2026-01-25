@@ -169,3 +169,223 @@ export async function checkLinksForRedirects(links: string[], limit = 10): Promi
   results.forEach((r) => { if (r) redirectLinks.push(r); });
   return redirectLinks;
 }
+
+// Check external links for 404 errors (HEAD request)
+export async function checkExternalLinks(links: string[], limit = 10): Promise<{ href: string; status: number; error?: string }[]> {
+  const brokenLinks: { href: string; status: number; error?: string }[] = [];
+  const linksToCheck = links.slice(0, limit);
+
+  const results = await Promise.all(linksToCheck.map(async (href) => {
+    try {
+      const parsed = new URL(href);
+      const isHttps = parsed.protocol === 'https:';
+      const lib = isHttps ? https : http;
+
+      return new Promise<{ href: string; status: number; error?: string } | null>((resolve) => {
+        const req = lib.request({
+          hostname: parsed.hostname,
+          port: parsed.port || (isHttps ? 443 : 80),
+          path: parsed.pathname + parsed.search,
+          method: 'HEAD',
+          timeout: 5000,
+          headers: { ...HEADERS, Host: parsed.hostname },
+        }, (res) => {
+          const status = res.statusCode || 0;
+          if (status >= 400) {
+            resolve({ href, status });
+          } else {
+            resolve(null);
+          }
+        });
+
+        req.on('error', (err) => resolve({ href, status: 0, error: err.message }));
+        req.on('timeout', () => { req.destroy(); resolve({ href, status: 0, error: 'timeout' }); });
+        req.end();
+      });
+    } catch {
+      return { href, status: 0, error: 'invalid URL' };
+    }
+  }));
+
+  results.forEach((r) => { if (r) brokenLinks.push(r); });
+  return brokenLinks;
+}
+
+// Check SSL certificate info
+export async function checkSSLCertificate(url: string): Promise<{
+  valid: boolean;
+  issuer?: string;
+  validFrom?: string;
+  validTo?: string;
+  daysUntilExpiry?: number;
+  error?: string;
+}> {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:') {
+        resolve({ valid: false, error: 'Not HTTPS' });
+        return;
+      }
+
+      const req = https.request({
+        hostname: parsed.hostname,
+        port: 443,
+        method: 'HEAD',
+        timeout: 5000,
+      }, (res) => {
+        const socket = res.socket as any;
+        if (socket && socket.getPeerCertificate) {
+          const cert = socket.getPeerCertificate();
+          if (cert && cert.valid_to) {
+            const validTo = new Date(cert.valid_to);
+            const validFrom = new Date(cert.valid_from);
+            const now = new Date();
+            const daysUntilExpiry = Math.floor((validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+            resolve({
+              valid: daysUntilExpiry > 0,
+              issuer: cert.issuer?.O || cert.issuer?.CN || 'Unknown',
+              validFrom: validFrom.toISOString().split('T')[0],
+              validTo: validTo.toISOString().split('T')[0],
+              daysUntilExpiry
+            });
+          } else {
+            resolve({ valid: true }); // Certificate exists but couldn't get details
+          }
+        } else {
+          resolve({ valid: true });
+        }
+      });
+
+      req.on('error', (err) => resolve({ valid: false, error: err.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ valid: false, error: 'timeout' }); });
+      req.end();
+    } catch (e) {
+      resolve({ valid: false, error: e instanceof Error ? e.message : 'Unknown error' });
+    }
+  });
+}
+
+// Check security headers
+export async function checkSecurityHeaders(url: string): Promise<{
+  headers: Record<string, string | null>;
+  score: number;
+  issues: string[];
+}> {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(url);
+      const isHttps = parsed.protocol === 'https:';
+      const lib = isHttps ? https : http;
+
+      const req = lib.request({
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: parsed.pathname,
+        method: 'HEAD',
+        timeout: 5000,
+        headers: { ...HEADERS, Host: parsed.hostname },
+      }, (res) => {
+        const h = res.headers;
+        const issues: string[] = [];
+        let score = 100;
+
+        const headers = {
+          'strict-transport-security': h['strict-transport-security'] as string || null,
+          'content-security-policy': h['content-security-policy'] as string || null,
+          'x-frame-options': h['x-frame-options'] as string || null,
+          'x-content-type-options': h['x-content-type-options'] as string || null,
+          'x-xss-protection': h['x-xss-protection'] as string || null,
+          'referrer-policy': h['referrer-policy'] as string || null,
+          'permissions-policy': h['permissions-policy'] as string || null,
+        };
+
+        // Check and score each header
+        if (!headers['strict-transport-security'] && isHttps) {
+          issues.push('Missing Strict-Transport-Security (HSTS)');
+          score -= 15;
+        }
+        if (!headers['content-security-policy']) {
+          issues.push('Missing Content-Security-Policy');
+          score -= 15;
+        }
+        if (!headers['x-frame-options']) {
+          issues.push('Missing X-Frame-Options (clickjacking protection)');
+          score -= 10;
+        }
+        if (!headers['x-content-type-options']) {
+          issues.push('Missing X-Content-Type-Options');
+          score -= 10;
+        }
+        if (!headers['referrer-policy']) {
+          issues.push('Missing Referrer-Policy');
+          score -= 5;
+        }
+
+        resolve({ headers, score: Math.max(0, score), issues });
+      });
+
+      req.on('error', () => resolve({ headers: {}, score: 0, issues: ['Could not check headers'] }));
+      req.on('timeout', () => { req.destroy(); resolve({ headers: {}, score: 0, issues: ['Timeout'] }); });
+      req.end();
+    } catch {
+      resolve({ headers: {}, score: 0, issues: ['Invalid URL'] });
+    }
+  });
+}
+
+// Check if URL is in sitemap
+export async function checkUrlInSitemap(sitemapUrl: string, pageUrl: string): Promise<{ found: boolean; urlCount: number }> {
+  try {
+    const result = await fetchHtml(sitemapUrl, 10000);
+    if (result.status !== 200) return { found: false, urlCount: 0 };
+
+    const content = result.html;
+    const normalizedPageUrl = pageUrl.toLowerCase().replace(/\/$/, '');
+
+    // Count URLs in sitemap
+    const urlMatches = content.match(/<loc>[^<]+<\/loc>/gi) || [];
+    const urlCount = urlMatches.length;
+
+    // Check if our page URL is in the sitemap
+    const found = urlMatches.some(match => {
+      const url = match.replace(/<\/?loc>/gi, '').toLowerCase().replace(/\/$/, '');
+      return url === normalizedPageUrl;
+    });
+
+    return { found, urlCount };
+  } catch {
+    return { found: false, urlCount: 0 };
+  }
+}
+
+// Check image size via HEAD request
+export async function checkImageSize(imageUrl: string): Promise<{ size: number; type: string | null } | null> {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(imageUrl);
+      const isHttps = parsed.protocol === 'https:';
+      const lib = isHttps ? https : http;
+
+      const req = lib.request({
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: parsed.pathname + parsed.search,
+        method: 'HEAD',
+        timeout: 3000,
+        headers: { ...HEADERS, Host: parsed.hostname },
+      }, (res) => {
+        const size = parseInt(res.headers['content-length'] || '0', 10);
+        const type = res.headers['content-type'] || null;
+        resolve({ size, type });
+      });
+
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.end();
+    } catch {
+      resolve(null);
+    }
+  });
+}
