@@ -44,6 +44,8 @@ export interface TechnicalData {
   sitemap: {
     found: boolean;
     url: string | null;
+    urlCount?: number;
+    pageInSitemap?: boolean;
   };
   llmsTxt: {
     found: boolean;
@@ -119,6 +121,12 @@ export interface LinkData {
   unsafeExternalCount: number;
   hasFooterLinks: boolean;
   hasNavLinks: boolean;
+  internalUrls?: { href: string; text: string }[];
+  externalUrls?: { href: string; text: string }[];
+  redirectLinks?: number;
+  redirectList?: { href: string; text: string; status: number; location: string }[];
+  brokenExternalLinks?: number;
+  brokenExternalList?: { href: string; text: string; status: number; error?: string }[];
 }
 
 export interface ImageData {
@@ -133,6 +141,16 @@ export interface ImageData {
   largeImages: number;
   modernFormats: number;
   srcsetCount: number;
+  brokenCount?: number;
+  brokenList?: { src: string; alt: string }[];
+  imageUrls?: { src: string; alt: string }[];
+  imageSizeAnalysis?: {
+    checked: number;
+    largeCount: number;
+    oldFormatCount: number;
+    largeList: { src: string; size: string; type: string | null }[];
+    oldFormatList: { src: string; type: string | null }[];
+  };
 }
 
 export interface SchemaItem {
@@ -269,6 +287,19 @@ export interface SecurityData {
   hasCORS: boolean;
   formWithoutAction: number;
   passwordFieldWithoutAutocomplete: number;
+  ssl?: {
+    valid: boolean;
+    issuer?: string;
+    validFrom?: string;
+    validTo?: string;
+    daysUntilExpiry?: number;
+    error?: string;
+  };
+  securityHeaders?: {
+    headers: Record<string, string | null>;
+    score: number;
+    issues: string[];
+  };
 }
 
 export interface PlatformData {

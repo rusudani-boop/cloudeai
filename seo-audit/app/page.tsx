@@ -29,17 +29,17 @@ interface AuditResult {
   timestamp: string;
   fetchMethod: 'url' | 'html';
   summary: { criticalIssues: number; highIssues: number; mediumIssues: number; lowIssues: number; totalChecks: number; passedChecks: number; };
-  technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null }; llmsTxt: { found: boolean; mentioned: boolean }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
+  technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null; urlCount?: number; pageInSitemap?: boolean }; llmsTxt: { found: boolean; mentioned: boolean }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
   international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; duplicateHreflangs?: string[]; nonCanonicalHreflangs?: string[]; };
   content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; detectedLanguage?: string; };
-  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; redirectLinks?: number; redirectList?: { href: string; text: string; status: number }[]; };
-  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; };
+  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; redirectLinks?: number; redirectList?: { href: string; text: string; status: number }[]; brokenExternalLinks?: number; brokenExternalList?: { href: string; text: string; status: number; error?: string }[]; };
+  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; imageSizeAnalysis?: { checked: number; largeCount: number; oldFormatCount: number; largeList: { src: string; size: string; type: string | null }[]; oldFormatList: { src: string; type: string | null }[]; }; };
   schema: { count: number; types: string[]; valid: number; invalid: number; details: SchemaItem[]; missingContext: number; hasWebSiteSearch: boolean; hasBreadcrumb: boolean; hasOrganization: boolean; hasFAQ: boolean; hasHowTo: boolean; };
   social: { og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null; siteName: string | null; locale: string | null }; twitter: { card: string | null; site: string | null; creator: string | null; title: string | null; description: string | null; image: string | null }; isComplete: boolean; hasArticleTags: boolean; };
   accessibility: { buttonsWithoutLabel: number; inputsWithoutLabel: number; linksWithoutText: number; iframesWithoutTitle: number; skippedHeadings: string[]; hasSkipLink: boolean; hasLangAttribute: boolean; clickableImagesWithoutAlt: number; positiveTabindex: number; hasMainLandmark: boolean; hasNavLandmark: boolean; hasFocusVisible: boolean; colorContrastIssues: number; aria: AriaData; tablesWithoutHeaders: number; autoplayMedia: number; };
   dom: DOMData;
   performance: { totalScripts: number; totalStylesheets: number; renderBlockingScripts: number; renderBlockingStyles: number; asyncScripts: number; deferScripts: number; moduleScripts: number; inlineScripts: number; inlineStyles: number; preloads: number; preloadsWithoutAs: number; preconnects: number; prefetches: number; dnsPrefetches: number; fontsWithoutDisplay: number; webFonts: number; criticalCssInlined: boolean; hasServiceWorker: boolean; htmlSize: number; estimatedWeight: string; };
-  security: { isHttps: boolean; mixedContentCount: number; mixedContentUrls: string[]; protocolRelativeCount: number; unsafeExternalLinks: number; hasCSP: boolean; hasXFrameOptions: boolean; hasXContentTypeOptions: boolean; hasReferrerPolicy: boolean; hasCORS: boolean; formWithoutAction: number; passwordFieldWithoutAutocomplete: number; };
+  security: { isHttps: boolean; mixedContentCount: number; mixedContentUrls: string[]; protocolRelativeCount: number; unsafeExternalLinks: number; hasCSP: boolean; hasXFrameOptions: boolean; hasXContentTypeOptions: boolean; hasReferrerPolicy: boolean; hasCORS: boolean; formWithoutAction: number; passwordFieldWithoutAutocomplete: number; ssl?: { valid: boolean; issuer?: string; validFrom?: string; validTo?: string; daysUntilExpiry?: number; error?: string }; securityHeaders?: { headers: Record<string, string | null>; score: number; issues: string[] }; };
   platform: { cms: string[]; frameworks: string[]; analytics: string[]; advertising: string[]; renderMethod: string; isCSR: boolean; isPWA: boolean; hasAMP: boolean; };
   trustSignals: { hasAboutPage: boolean; hasContactPage: boolean; hasPrivacyPage: boolean; hasTermsPage: boolean; hasCookiePolicy: boolean; hasAuthor: boolean; hasPublishDate: boolean; hasModifiedDate: boolean; hasCopyright: boolean; hasAddress: boolean; hasPhone: boolean; hasEmail: boolean; socialLinksCount: number; socialPlatforms: string[]; hasSSLBadge: boolean; hasPaymentBadges: boolean; hasReviews: boolean; hasCertifications: boolean; };
   issues: AuditIssue[];
@@ -405,6 +405,34 @@ export default function SEOChecker() {
                           </div>
                         )}
 
+                        {/* Show broken external links */}
+                        {issue.id === 'broken-external-links' && results.links.brokenExternalList && results.links.brokenExternalList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">გატეხილი გარე ბმულები:</div>
+                            {results.links.brokenExternalList.map((link: {href: string; text: string; status: number; error?: string}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-red-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
+                                <span className="text-red-600 font-medium">{link.status || link.error}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show large images */}
+                        {issue.id === 'large-images' && results.images.imageSizeAnalysis?.largeList && results.images.imageSizeAnalysis.largeList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">დიდი ზომის სურათები:</div>
+                            {results.images.imageSizeAnalysis.largeList.slice(0, 5).map((img: {src: string; size: string; type: string | null}, j: number) => (
+                              <div key={j} className="flex gap-2 items-center">
+                                <span className="text-yellow-600">•</span>
+                                <code className="bg-white/50 px-1 rounded truncate max-w-xs">{img.src.split('/').pop()}</code>
+                                <span className="font-medium">{img.size}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Show mixed content URLs */}
                         {issue.id === 'mixed-content' && results.security.mixedContentUrls && results.security.mixedContentUrls.length > 0 && (
                           <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
@@ -562,6 +590,7 @@ export default function SEOChecker() {
                   <CheckBadge ok={!results.technical.robots.hasNoindex} label={results.technical.robots.hasNoindex ? 'NOINDEX!' : 'Indexable'} />
                   <CheckBadge ok={!results.platform.isCSR} label={results.platform.isCSR ? 'CSR' : 'SSR/SSG'} />
                   <CheckBadge ok={results.technical.llmsTxt?.found || false} label="llms.txt" />
+                  <CheckBadge ok={results.technical.sitemap?.pageInSitemap ?? false} label={`Sitemap${results.technical.sitemap?.urlCount ? ` (${results.technical.sitemap.urlCount})` : ''}`} />
                   <CheckBadge ok={results.accessibility.hasSkipLink} label="Skip Link" />
                   <CheckBadge ok={results.technical.appleTouchIcon} label="Apple Icon" />
                   <CheckBadge ok={results.technical.manifestJson || false} label="Manifest" />
@@ -668,6 +697,38 @@ export default function SEOChecker() {
                   <div className="text-sm text-gray-600">Protocol-relative</div>
                 </div>
               </div>
+
+              {/* SSL Certificate Info */}
+              {results.security.ssl && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-700 mb-3">SSL სერტიფიკატი</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <CheckBadge ok={results.security.ssl.valid} label={results.security.ssl.valid ? 'ვალიდურია' : 'პრობლემა'} />
+                    {results.security.ssl.issuer && <div className="text-sm text-gray-600">გამცემი: {results.security.ssl.issuer}</div>}
+                    {results.security.ssl.validTo && <div className="text-sm text-gray-600">იწურება: {results.security.ssl.validTo}</div>}
+                    {results.security.ssl.daysUntilExpiry !== undefined && (
+                      <div className={`text-sm ${results.security.ssl.daysUntilExpiry < 30 ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                        {results.security.ssl.daysUntilExpiry} დღე დარჩა
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Security Headers */}
+              {results.security.securityHeaders && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-700 mb-3">უსაფრთხოების ჰედერები (ქულა: {results.security.securityHeaders.score}/100)</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                    <CheckBadge ok={!!results.security.securityHeaders.headers['strict-transport-security']} label="HSTS" />
+                    <CheckBadge ok={!!results.security.securityHeaders.headers['content-security-policy']} label="CSP" />
+                    <CheckBadge ok={!!results.security.securityHeaders.headers['x-frame-options']} label="X-Frame-Options" />
+                    <CheckBadge ok={!!results.security.securityHeaders.headers['x-content-type-options']} label="X-Content-Type" />
+                    <CheckBadge ok={!!results.security.securityHeaders.headers['referrer-policy']} label="Referrer-Policy" />
+                    <CheckBadge ok={!!results.security.securityHeaders.headers['permissions-policy']} label="Permissions-Policy" />
+                  </div>
+                </div>
+              )}
             </Section>
 
             {/* International / Hreflang */}
@@ -692,24 +753,39 @@ export default function SEOChecker() {
 
             {/* Links */}
             <Section title="ბმულები" icon={Icons.Link} id="links">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg"><div className="text-2xl font-bold text-blue-700">{results.links.total}</div><div className="text-sm text-blue-600">სულ</div></div>
                 <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-700">{results.links.internal}</div><div className="text-sm text-green-600">შიდა</div></div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg"><div className="text-2xl font-bold text-purple-700">{results.links.external}</div><div className="text-sm text-purple-600">გარე</div></div>
                 <div className={`text-center p-4 rounded-lg ${results.links.broken > 0 ? 'bg-red-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.links.broken > 0 ? 'text-red-700' : 'text-gray-700'}`}>{results.links.broken}</div><div className="text-sm text-gray-600">ცარიელი</div></div>
+                <div className={`text-center p-4 rounded-lg ${(results.links.brokenExternalLinks || 0) > 0 ? 'bg-red-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${(results.links.brokenExternalLinks || 0) > 0 ? 'text-red-700' : 'text-gray-700'}`}>{results.links.brokenExternalLinks || 0}</div><div className="text-sm text-gray-600">404 გარე</div></div>
                 <div className={`text-center p-4 rounded-lg ${results.links.genericAnchors > 0 ? 'bg-yellow-50' : 'bg-gray-50'}`}><div className={`text-2xl font-bold ${results.links.genericAnchors > 0 ? 'text-yellow-700' : 'text-gray-700'}`}>{results.links.genericAnchors}</div><div className="text-sm text-gray-600">ზოგადი</div></div>
               </div>
             </Section>
 
             {/* Images */}
             <Section title="სურათები" icon={Icons.Image} id="images">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
                 <div className="text-center p-4 bg-gray-50 rounded-lg"><div className="text-2xl font-bold text-gray-700">{results.images.total}</div><div className="text-sm text-gray-600">სულ</div></div>
                 <div className={`text-center p-4 rounded-lg ${results.images.withoutAlt > 0 ? 'bg-red-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${results.images.withoutAlt > 0 ? 'text-red-700' : 'text-green-700'}`}>{results.images.withoutAlt}</div><div className="text-sm text-gray-600">alt-ის გარეშე</div></div>
                 <div className={`text-center p-4 rounded-lg ${results.images.withoutDimensions > 0 ? 'bg-orange-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${results.images.withoutDimensions > 0 ? 'text-orange-700' : 'text-green-700'}`}>{results.images.withoutDimensions}</div><div className="text-sm text-gray-600">ზომის გარეშე</div></div>
                 <div className="text-center p-4 bg-green-50 rounded-lg"><div className="text-2xl font-bold text-green-700">{results.images.lazyLoaded}</div><div className="text-sm text-green-600">lazy loading</div></div>
                 <div className="text-center p-4 bg-teal-50 rounded-lg"><div className="text-2xl font-bold text-teal-700">{results.images.modernFormats || 0}</div><div className="text-sm text-teal-600">WebP/AVIF</div></div>
+                <div className={`text-center p-4 rounded-lg ${(results.images.imageSizeAnalysis?.largeCount || 0) > 0 ? 'bg-yellow-50' : 'bg-green-50'}`}><div className={`text-2xl font-bold ${(results.images.imageSizeAnalysis?.largeCount || 0) > 0 ? 'text-yellow-700' : 'text-green-700'}`}>{results.images.imageSizeAnalysis?.largeCount || 0}</div><div className="text-sm text-gray-600">&gt;200KB</div></div>
               </div>
+              {/* Large images list */}
+              {results.images.imageSizeAnalysis?.largeList && results.images.imageSizeAnalysis.largeList.length > 0 && (
+                <div className="mt-4 p-3 bg-yellow-50 rounded-lg text-sm">
+                  <div className="font-medium text-yellow-800 mb-2">დიდი ზომის სურათები:</div>
+                  {results.images.imageSizeAnalysis.largeList.slice(0, 5).map((img, i) => (
+                    <div key={i} className="flex gap-2 text-yellow-700">
+                      <span className="text-yellow-600">•</span>
+                      <span className="truncate max-w-xs">{img.src.split('/').pop()}</span>
+                      <span className="font-medium">{img.size}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Section>
 
             {/* Schema */}
