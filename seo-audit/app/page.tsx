@@ -71,6 +71,8 @@ const Icons = {
   Accessibility: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
   DOM: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>,
   Chart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+  Smartphone: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Server: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>,
 };
 
 // Chart Components
@@ -628,9 +630,107 @@ export default function SEOChecker() {
               </Section>
             )}
 
+            {/* Mobile Friendliness */}
+            {results.mobile && (
+              <Section title="მობილური მეგობრულობა" icon={Icons.Smartphone} id="mobile">
+                <div className="mt-4">
+                  {/* Mobile Score */}
+                  <div className="flex items-center gap-6 mb-6">
+                    <div className="relative">
+                      <DonutChart value={results.mobile.score} size={100} strokeWidth={10} color={results.mobile.score >= 80 ? '#10b981' : results.mobile.score >= 50 ? '#f59e0b' : '#ef4444'} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold">{results.mobile.score}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800 text-lg">მობილური ქულა</div>
+                      <div className="text-sm text-gray-500">
+                        {results.mobile.score >= 80 ? 'კარგი მობილური გამოცდილება' : results.mobile.score >= 50 ? 'საჭიროებს გაუმჯობესებას' : 'კრიტიკული პრობლემები'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Metrics Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={`p-4 rounded-lg text-center ${results.mobile.hasViewport && results.mobile.hasWidthDeviceWidth ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <div className={`text-2xl font-bold ${results.mobile.hasViewport && results.mobile.hasWidthDeviceWidth ? 'text-green-700' : 'text-red-700'}`}>
+                        {results.mobile.hasViewport && results.mobile.hasWidthDeviceWidth ? '✓' : '✗'}
+                      </div>
+                      <div className="text-sm text-gray-600">Viewport</div>
+                    </div>
+                    <div className={`p-4 rounded-lg text-center ${results.mobile.smallTapTargets === 0 ? 'bg-green-50' : 'bg-orange-50'}`}>
+                      <div className={`text-2xl font-bold ${results.mobile.smallTapTargets === 0 ? 'text-green-700' : 'text-orange-700'}`}>{results.mobile.smallTapTargets}</div>
+                      <div className="text-sm text-gray-600">პატარა Tap Target</div>
+                    </div>
+                    <div className={`p-4 rounded-lg text-center ${results.mobile.hasMediaQueries || results.mobile.hasFlexbox || results.mobile.hasGrid ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <div className={`text-2xl font-bold ${results.mobile.hasMediaQueries || results.mobile.hasFlexbox || results.mobile.hasGrid ? 'text-green-700' : 'text-red-700'}`}>
+                        {results.mobile.hasMediaQueries || results.mobile.hasFlexbox || results.mobile.hasGrid ? '✓' : '✗'}
+                      </div>
+                      <div className="text-sm text-gray-600">რესპონსიული</div>
+                    </div>
+                    <div className={`p-4 rounded-lg text-center ${!results.mobile.horizontalScrollRisk ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <div className={`text-2xl font-bold ${!results.mobile.horizontalScrollRisk ? 'text-green-700' : 'text-red-700'}`}>
+                        {!results.mobile.horizontalScrollRisk ? '✓' : '✗'}
+                      </div>
+                      <div className="text-sm text-gray-600">სიგანე OK</div>
+                    </div>
+                  </div>
+
+                  {/* Detailed Mobile Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="font-medium text-gray-700 mb-2">რესპონსიული დიზაინი</div>
+                      <div className="space-y-1 text-sm">
+                        <CheckBadge ok={results.mobile.hasMediaQueries} label={`Media Queries (${results.mobile.mediaQueryCount})`} />
+                        <CheckBadge ok={results.mobile.hasFlexbox} label="Flexbox" />
+                        <CheckBadge ok={results.mobile.hasGrid} label="CSS Grid" />
+                        <CheckBadge ok={results.mobile.usesRelativeFontSizes} label="რელატიური ფონტი (rem/em)" />
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="font-medium text-gray-700 mb-2">მობილური მეტა</div>
+                      <div className="space-y-1 text-sm">
+                        <CheckBadge ok={results.mobile.hasThemeColor} label="Theme Color" />
+                        <CheckBadge ok={results.mobile.hasAppleTouchIcon} label="Apple Touch Icon" />
+                        <CheckBadge ok={results.mobile.hasManifest} label="Web App Manifest" />
+                        <CheckBadge ok={!results.mobile.hasUserScalable} label="მასშტაბირება ნებადართული" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Responsive Images */}
+                  {results.mobile.totalImages > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                      <div className="text-sm text-blue-800">
+                        <span className="font-medium">რესპონსიული სურათები:</span> {results.mobile.responsiveImagesCount} / {results.mobile.totalImages}
+                        {results.mobile.responsiveImagesCount < results.mobile.totalImages * 0.5 && (
+                          <span className="text-orange-600 ml-2">— რეკომენდებულია srcset გამოყენება</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mobile Issues */}
+                  {results.mobile.issues.length > 0 && (
+                    <div className="mt-4 p-4 bg-red-50 rounded-lg">
+                      <div className="font-medium text-red-800 mb-2">აღმოჩენილი პრობლემები:</div>
+                      <ul className="space-y-1">
+                        {results.mobile.issues.map((issue, i) => (
+                          <li key={i} className="text-sm text-red-700 flex gap-2">
+                            <span className="text-red-500">•</span>
+                            {issue}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+
             {/* Accessibility */}
             <Section title="ხელმისაწვდომობა (A11y)" icon={Icons.Eye} id="accessibility">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
                 <div className={`p-4 rounded-lg text-center ${results.accessibility.buttonsWithoutLabel === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                   <div className={`text-2xl font-bold ${results.accessibility.buttonsWithoutLabel === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.accessibility.buttonsWithoutLabel}</div>
                   <div className="text-sm text-gray-600">ღილაკი ლეიბლის გარეშე</div>
@@ -643,11 +743,35 @@ export default function SEOChecker() {
                   <div className={`text-2xl font-bold ${results.accessibility.linksWithoutText === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.accessibility.linksWithoutText}</div>
                   <div className="text-sm text-gray-600">ბმული ტექსტის გარეშე</div>
                 </div>
+                <div className={`p-4 rounded-lg text-center ${results.accessibility.colorContrastIssues === 0 ? 'bg-green-50' : 'bg-orange-50'}`}>
+                  <div className={`text-2xl font-bold ${results.accessibility.colorContrastIssues === 0 ? 'text-green-700' : 'text-orange-700'}`}>{results.accessibility.colorContrastIssues}</div>
+                  <div className="text-sm text-gray-600">კონტრასტის პრობლემა</div>
+                </div>
                 <div className="p-4 bg-blue-50 rounded-lg text-center">
                   <div className="text-2xl font-bold text-blue-700">{results.accessibility.aria?.ariaLabels || 0}</div>
                   <div className="text-sm text-gray-600">ARIA Labels</div>
                 </div>
               </div>
+              {/* Contrast Details */}
+              {results.accessibility.contrastDetails && results.accessibility.contrastDetails.lowContrastElements.length > 0 && (
+                <div className="mt-4 p-4 bg-orange-50 rounded-lg">
+                  <div className="font-medium text-orange-800 mb-2">კონტრასტის პრობლემები (WCAG AA: 4.5:1):</div>
+                  <div className="space-y-2">
+                    {results.accessibility.contrastDetails.lowContrastElements.map((item, i) => (
+                      <div key={i} className="text-sm text-orange-700 flex gap-2">
+                        <span className="text-orange-500">•</span>
+                        <span className="font-mono bg-orange-100 px-1 rounded">&lt;{item.element}&gt;</span>
+                        <span className="truncate max-w-xs">{item.text}</span>
+                        <span className="text-orange-600">({item.ratio})</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-xs text-orange-600">
+                    WCAG AA: {results.accessibility.contrastDetails.passedWCAG_AA ? '✓ გავლილი' : '✗ ვერ გაიარა'} |
+                    WCAG AAA: {results.accessibility.contrastDetails.passedWCAG_AAA ? '✓ გავლილი' : '✗ ვერ გაიარა'}
+                  </div>
+                </div>
+              )}
               {results.accessibility.aria?.missingLandmarks && results.accessibility.aria.missingLandmarks.length > 0 && (
                 <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
                   <div className="text-sm font-medium text-yellow-800">აკლია Landmarks: {results.accessibility.aria.missingLandmarks.join(', ')}</div>
@@ -831,6 +955,111 @@ export default function SEOChecker() {
                 <div className="flex items-center gap-2"><span className="text-gray-500">რენდერი:</span><span className={`px-2 py-1 rounded text-sm ${results.platform.isCSR ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{results.platform.renderMethod}</span></div>
               </div>
             </Section>
+
+            {/* External Resources */}
+            {results.externalResources && (
+              <Section title="გარე რესურსები" icon={Icons.Server} id="external-resources">
+                <div className="mt-4">
+                  {/* Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="p-4 bg-blue-50 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-blue-700">{results.externalResources.cssCount}</div>
+                      <div className="text-sm text-gray-600">CSS ფაილი</div>
+                    </div>
+                    <div className="p-4 bg-yellow-50 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-yellow-700">{results.externalResources.jsCount}</div>
+                      <div className="text-sm text-gray-600">JS ფაილი</div>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-purple-700">{results.externalResources.fontCount}</div>
+                      <div className="text-sm text-gray-600">ფონტი</div>
+                    </div>
+                    <div className="p-4 bg-orange-50 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-orange-700">{results.externalResources.thirdPartyCount}</div>
+                      <div className="text-sm text-gray-600">Third-party დომენი</div>
+                    </div>
+                  </div>
+
+                  {/* CSS Files */}
+                  {results.externalResources.cssFiles.length > 0 && (
+                    <div className="mb-4">
+                      <div className="font-medium text-gray-700 mb-2">CSS ფაილები:</div>
+                      <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                        {results.externalResources.cssFiles.slice(0, 10).map((file, i) => (
+                          <div key={i} className="text-sm text-gray-600 flex items-center gap-2 py-1">
+                            <span className={`w-2 h-2 rounded-full ${file.isThirdParty ? 'bg-orange-400' : 'bg-green-400'}`}></span>
+                            <span className="truncate font-mono text-xs">{file.url}</span>
+                            {file.isThirdParty && <span className="text-xs text-orange-600">(third-party)</span>}
+                          </div>
+                        ))}
+                        {results.externalResources.cssFiles.length > 10 && (
+                          <div className="text-xs text-gray-500 mt-1">+{results.externalResources.cssFiles.length - 10} მეტი...</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* JS Files */}
+                  {results.externalResources.jsFiles.length > 0 && (
+                    <div className="mb-4">
+                      <div className="font-medium text-gray-700 mb-2">JavaScript ფაილები:</div>
+                      <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                        {results.externalResources.jsFiles.slice(0, 10).map((file, i) => (
+                          <div key={i} className="text-sm text-gray-600 flex items-center gap-2 py-1">
+                            <span className={`w-2 h-2 rounded-full ${file.isThirdParty ? 'bg-orange-400' : 'bg-green-400'}`}></span>
+                            <span className="truncate font-mono text-xs flex-1">{file.url}</span>
+                            <span className="flex gap-1">
+                              {file.async && <span className="text-xs bg-green-100 text-green-700 px-1 rounded">async</span>}
+                              {file.defer && <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">defer</span>}
+                              {file.module && <span className="text-xs bg-purple-100 text-purple-700 px-1 rounded">module</span>}
+                            </span>
+                          </div>
+                        ))}
+                        {results.externalResources.jsFiles.length > 10 && (
+                          <div className="text-xs text-gray-500 mt-1">+{results.externalResources.jsFiles.length - 10} მეტი...</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Google Fonts */}
+                  {results.externalResources.googleFonts.length > 0 && (
+                    <div className="mb-4">
+                      <div className="font-medium text-gray-700 mb-2">Google Fonts:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {results.externalResources.googleFonts.map((font, i) => (
+                          <span key={i} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">{font}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Third-party Domains */}
+                  {results.externalResources.thirdPartyDomains.length > 0 && (
+                    <div className="mb-4">
+                      <div className="font-medium text-gray-700 mb-2">Third-party დომენები:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {results.externalResources.thirdPartyDomains.map((domain, i) => (
+                          <span key={i} className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm font-mono">{domain}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Suggested Preconnects */}
+                  {results.externalResources.suggestedPreconnects.length > 0 && (
+                    <div className="p-3 bg-yellow-50 rounded-lg">
+                      <div className="text-sm font-medium text-yellow-800 mb-1">რეკომენდებული preconnect:</div>
+                      <div className="text-xs text-yellow-700 space-y-1">
+                        {results.externalResources.suggestedPreconnects.map((domain, i) => (
+                          <div key={i} className="font-mono">&lt;link rel=&quot;preconnect&quot; href=&quot;https://{domain}&quot;&gt;</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
 
             {/* AI Content */}
             {results.content.aiScore > 20 && (
