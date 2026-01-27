@@ -33,6 +33,7 @@ export interface AuditIssue {
 
 export interface TextMeta {
   value: string;
+  visibleTitle?: string; // H1 tag content (visible title on page)
   length: number;
   isOptimal: boolean;
 }
@@ -66,6 +67,7 @@ export interface TechnicalData {
     url: string | null;
     urlCount?: number;
     pageInSitemap?: boolean;
+    sitemapCount?: number; // Number of sub-sitemaps in sitemap_index.xml
   };
 
   llmsTxt: {
