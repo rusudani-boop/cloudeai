@@ -87,45 +87,31 @@ export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; c
   for (const path of paths) {
     try {
       const url = new URL(path, baseUrl).href;
-      const result = await fetchHtml(url, 8000);
+      const result = await fetchHtml(url, 5000);
 
+      // Only accept 200 status
       if (result.status !== 200) {
         continue;
       }
 
       const content = result.html.trim();
 
-      // Skip empty responses
-      if (content.length < 10) {
+      // Skip empty or very short responses
+      if (content.length < 20) {
         continue;
       }
 
       // Reject HTML responses (error pages, WAF, etc.)
-      // Check for common HTML markers
-      const isHtml = content.startsWith('<!') ||
-                     content.startsWith('<html') ||
-                     content.startsWith('<HTML') ||
-                     /<html[\s>]/i.test(content) ||
-                     /<head[\s>]/i.test(content) ||
-                     /<body[\s>]/i.test(content);
-      if (isHtml) {
+      const lowerContent = content.toLowerCase();
+      if (lowerContent.includes('<!doctype') ||
+          lowerContent.includes('<html') ||
+          lowerContent.includes('<head') ||
+          lowerContent.includes('<body')) {
         continue;
       }
 
-      // Accept any valid plain text file that looks like llms.txt
-      // Valid llms.txt typically contains: comments (#), key:value pairs, URLs, or markdown-like content
-      const hasValidContent =
-        /^#/m.test(content) ||                          // Has comments
-        /^[a-zA-Z_-]+:\s*/m.test(content) ||           // Has key: value format
-        /^>\s*/m.test(content) ||                       // Has markdown quotes
-        /^-\s+/m.test(content) ||                       // Has markdown lists
-        /https?:\/\//i.test(content) ||                 // Contains URLs
-        /\.(md|txt|html|pdf)$/im.test(content) ||       // References files
-        content.split('\n').length >= 3;                // Has multiple lines
-
-      if (hasValidContent) {
-        return { found: true, content: content.substring(0, 500) };
-      }
+      // Accept any plain text file - llms.txt format is flexible
+      return { found: true, content: content.substring(0, 500) };
     } catch {
       continue;
     }
@@ -181,7 +167,7 @@ export async function checkLinksForRedirects(links: string[], limit = 10): Promi
   return redirectLinks;
 }
 
-// Check external links for 404 errors (HEAD request)
+// Check external links for 404 errors (uses GET with early abort)
 export async function checkExternalLinks(links: string[], limit = 10): Promise<{ href: string; status: number; error?: string }[]> {
   const brokenLinks: { href: string; status: number; error?: string }[] = [];
   const linksToCheck = links.slice(0, limit);
@@ -193,28 +179,33 @@ export async function checkExternalLinks(links: string[], limit = 10): Promise<{
       const lib = isHttps ? https : http;
 
       return new Promise<{ href: string; status: number; error?: string } | null>((resolve) => {
+        // Use GET instead of HEAD - many servers block HEAD requests
         const req = lib.request({
           hostname: parsed.hostname,
           port: parsed.port || (isHttps ? 443 : 80),
           path: parsed.pathname + parsed.search,
-          method: 'HEAD',
-          timeout: 5000,
+          method: 'GET',
+          timeout: 4000,
           headers: { ...HEADERS, Host: parsed.hostname },
         }, (res) => {
+          // Immediately destroy connection after getting status
+          req.destroy();
           const status = res.statusCode || 0;
-          if (status >= 400) {
+          // Only report actual broken links (404, 410 Gone)
+          // Don't report 400, 403, 405 as these often work in browser
+          if (status === 404 || status === 410) {
             resolve({ href, status });
           } else {
             resolve(null);
           }
         });
 
-        req.on('error', (err) => resolve({ href, status: 0, error: err.message }));
-        req.on('timeout', () => { req.destroy(); resolve({ href, status: 0, error: 'timeout' }); });
+        req.on('error', () => resolve(null)); // Network errors - don't report as broken
+        req.on('timeout', () => { req.destroy(); resolve(null); }); // Timeout - don't report as broken
         req.end();
       });
     } catch {
-      return { href, status: 0, error: 'invalid URL' };
+      return null; // Invalid URL - skip silently
     }
   }));
 
@@ -290,13 +281,12 @@ export async function checkSecurityHeaders(url: string): Promise<{
       const isHttps = parsed.protocol === 'https:';
       const lib = isHttps ? https : http;
 
-      // Use GET instead of HEAD - many servers don't send security headers on HEAD requests
       const req = lib.request({
         hostname: parsed.hostname,
         port: parsed.port || (isHttps ? 443 : 80),
         path: parsed.pathname || '/',
         method: 'GET',
-        timeout: 8000,
+        timeout: 6000,
         headers: { ...HEADERS, Host: parsed.hostname },
       }, (res) => {
         // Consume response body to prevent socket hanging
@@ -305,11 +295,10 @@ export async function checkSecurityHeaders(url: string): Promise<{
 
         const h = res.headers;
         const issues: string[] = [];
-        let score = 100;
+        let score = 50; // Start at 50 - baseline for most sites
 
-        // Helper function to get header value (handles case variations)
+        // Helper function to get header value
         const getHeader = (name: string): string | null => {
-          // Node.js lowercases all header names
           const value = h[name.toLowerCase()];
           if (Array.isArray(value)) return value[0] || null;
           return value as string || null;
@@ -325,66 +314,58 @@ export async function checkSecurityHeaders(url: string): Promise<{
           'permissions-policy': getHeader('permissions-policy'),
         };
 
-        // Score based on presence of security headers
-        // HSTS - only required for HTTPS sites (15 points)
-        if (!headers['strict-transport-security'] && isHttps) {
-          issues.push('Missing Strict-Transport-Security (HSTS)');
-          score -= 15;
-        } else if (headers['strict-transport-security']) {
-          // Check HSTS quality
+        // Add points for each security header present (bonus system)
+        // HSTS - important for HTTPS
+        if (headers['strict-transport-security'] && isHttps) {
+          score += 15;
           const hsts = headers['strict-transport-security'].toLowerCase();
-          if (!hsts.includes('max-age') || parseInt(hsts.match(/max-age=(\d+)/)?.[1] || '0') < 31536000) {
-            issues.push('HSTS max-age should be at least 1 year (31536000)');
-            score -= 5;
+          if (hsts.includes('max-age') && parseInt(hsts.match(/max-age=(\d+)/)?.[1] || '0') >= 31536000) {
+            score += 5; // Bonus for good max-age
           }
         }
 
-        // CSP - 15 points
-        if (!headers['content-security-policy']) {
-          issues.push('Missing Content-Security-Policy');
-          score -= 15;
+        // CSP - valuable but complex
+        if (headers['content-security-policy']) {
+          score += 10;
         }
 
-        // X-Frame-Options - 10 points (or frame-ancestors in CSP)
+        // X-Frame-Options or frame-ancestors in CSP
         const csp = headers['content-security-policy']?.toLowerCase() || '';
-        if (!headers['x-frame-options'] && !csp.includes('frame-ancestors')) {
-          issues.push('Missing X-Frame-Options (clickjacking protection)');
-          score -= 10;
+        if (headers['x-frame-options'] || csp.includes('frame-ancestors')) {
+          score += 8;
         }
 
-        // X-Content-Type-Options - 10 points
-        if (!headers['x-content-type-options']) {
-          issues.push('Missing X-Content-Type-Options');
-          score -= 10;
-        } else if (headers['x-content-type-options'].toLowerCase() !== 'nosniff') {
-          issues.push('X-Content-Type-Options should be "nosniff"');
-          score -= 5;
+        // X-Content-Type-Options
+        if (headers['x-content-type-options']?.toLowerCase() === 'nosniff') {
+          score += 7;
         }
 
-        // Referrer-Policy - 5 points
-        if (!headers['referrer-policy']) {
-          issues.push('Missing Referrer-Policy');
-          score -= 5;
+        // Referrer-Policy
+        if (headers['referrer-policy']) {
+          score += 5;
         }
 
-        // Permissions-Policy (optional, bonus)
+        // Permissions-Policy (optional)
         if (headers['permissions-policy']) {
-          score += 5; // Bonus points for having Permissions-Policy
+          score += 5;
         }
 
-        // X-XSS-Protection is deprecated but still adds some protection
-        if (headers['x-xss-protection'] && headers['x-xss-protection'].includes('1')) {
-          score += 2; // Small bonus for legacy protection
+        // Only report critical missing headers as issues
+        if (isHttps && !headers['strict-transport-security']) {
+          issues.push('რეკომენდებულია HSTS (Strict-Transport-Security)');
+        }
+        if (!headers['x-content-type-options']) {
+          issues.push('რეკომენდებულია X-Content-Type-Options: nosniff');
         }
 
         resolve({ headers, score: Math.max(0, Math.min(100, score)), issues });
       });
 
-      req.on('error', () => resolve({ headers: {}, score: 0, issues: ['Could not check headers'] }));
-      req.on('timeout', () => { req.destroy(); resolve({ headers: {}, score: 0, issues: ['Timeout'] }); });
+      req.on('error', () => resolve({ headers: {}, score: 50, issues: [] }));
+      req.on('timeout', () => { req.destroy(); resolve({ headers: {}, score: 50, issues: [] }); });
       req.end();
     } catch {
-      resolve({ headers: {}, score: 0, issues: ['Invalid URL'] });
+      resolve({ headers: {}, score: 50, issues: [] });
     }
   });
 }
