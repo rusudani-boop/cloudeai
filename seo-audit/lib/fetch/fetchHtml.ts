@@ -92,31 +92,30 @@ export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; c
       const content = result.html.trim();
       const lowerContent = content.toLowerCase();
 
-      // Skip if clearly an HTML page
-      if (lowerContent.startsWith('<!doctype') || lowerContent.startsWith('<html')) {
+      // Reject HTML or HTML-like responses (Cloudflare, WAF, error pages)
+      const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+      if (isHtml) {
         continue;
       }
 
-      // Check for llms.txt indicators
-      const hasLlmsTxtIndicators =
-        content.startsWith('#') || // Starts with comment
-        lowerContent.includes('# llms') ||
-        lowerContent.includes('# name:') ||
-        lowerContent.includes('# description:') ||
-        lowerContent.includes('llm') ||
-        lowerContent.includes('language model') ||
-        lowerContent.includes('ai ') ||
-        (content.includes('http') && !content.includes('<a ')) || // Contains URLs but not HTML links
-        /^[#\w\s\-:.,\/@]+$/m.test(content.substring(0, 200)); // Plain text format
+      // Require llms.txt–specific structure (not vague keywords)
+      const hasLlmsStructure =
+        /^#\s*llms?/im.test(content) ||
+        /^name:\s*/im.test(content) ||
+        /^description:\s*/im.test(content) ||
+        /^policies:\s*/im.test(content) ||
+        /^allow:\s*/im.test(content);
 
-      // Valid if: status 200, has content, and either has llms indicators OR is plain text (no HTML tags)
-      const isPlainText = !lowerContent.includes('<head>') && !lowerContent.includes('<body>') && !lowerContent.includes('</div>');
-
-      if (result.status === 200 && content.length > 10 && (hasLlmsTxtIndicators || isPlainText)) {
+      // Final validation
+      if (
+        result.status === 200 &&
+        content.length > 20 &&
+        hasLlmsStructure
+      ) {
         return { found: true, content: content.substring(0, 500) };
       }
     } catch {
-      // Try next path
+      continue;
     }
   }
 
