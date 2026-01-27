@@ -9,6 +9,7 @@ import type {
   ReadabilityData,
   AriaData,
   DOMData,
+  RenderMethod,
 } from './types';
 
 // ============================================
@@ -145,8 +146,11 @@ function calculateReadability(text: string): ReadabilityData {
   const sentences = cleanText.split(/[.!?։।;]+/).filter((s) => s.trim().length > 10);
   const totalSentences = Math.max(sentences.length, 1);
 
-  // Get words - filter out very short tokens
-  const words = cleanText.split(/\s+/).filter((w) => w.replace(/[^\p{L}]/gu, '').length >= 2);
+  // Get words - filter out very short tokens (supports Georgian, Cyrillic, Latin, German umlauts)
+  const words = cleanText.split(/\s+/).filter((w) => {
+    const lettersOnly = w.replace(/[^\u10A0-\u10FF\u0400-\u04FFa-zA-ZäöüÄÖÜß]/g, '');
+    return lettersOnly.length >= 2;
+  });
   const totalWords = words.length;
 
   if (totalWords < 10) {
@@ -487,7 +491,7 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
   } catch {}
 
   let internal = 0, external = 0, broken = 0, genericAnchors = 0, nofollow = 0, sponsored = 0, ugc = 0, unsafeExternalCount = 0;
-  const brokenList: { href: string; text: string }[] = [];
+  const brokenList: { href: string; text: string; status: number }[] = [];
   const genericAnchorsList: { text: string; href: string }[] = [];
   const internalUrls: { href: string; text: string }[] = []; // For redirect checking
   const externalUrls: { href: string; text: string }[] = []; // For 404 checking
@@ -497,7 +501,7 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     const text = a.textContent?.trim().toLowerCase() || '';
     const rel = a.getAttribute('rel') || '';
 
-    if (PATTERNS.EMPTY_HREFS.includes(href)) { broken++; brokenList.push({ href: href || '(empty)', text: text.substring(0, 50) }); }
+    if (PATTERNS.EMPTY_HREFS.includes(href)) { broken++; brokenList.push({ href: href || '(empty)', text: text.substring(0, 50), status: 0 }); }
 
     // Track internal vs external and collect full internal URLs
     let isInternal = false;
@@ -729,7 +733,8 @@ function analyzePlatform(htmlLower: string) {
   const hasSubstantialContent = htmlLower.length > 5000;
   const isCSR = hasReactRoot && !hasSubstantialContent;
 
-  return { cms: [...new Set(cms)], frameworks: [...new Set(frameworks)], analytics: [...new Set(analytics)], advertising: [...new Set(advertising)], renderMethod: isCSR ? 'Client-Side Rendered (CSR)' : 'Server-Side Rendered (SSR)', isCSR, isPWA: htmlLower.includes('manifest.json') || htmlLower.includes('serviceworker'), hasAMP: htmlLower.includes('⚡') || htmlLower.includes('amp-') || htmlLower.includes('amphtml') };
+  const renderMethod: RenderMethod = isCSR ? 'csr' : 'ssr';
+  return { cms: [...new Set(cms)], frameworks: [...new Set(frameworks)], analytics: [...new Set(analytics)], advertising: [...new Set(advertising)], renderMethod, isCSR, isPWA: htmlLower.includes('manifest.json') || htmlLower.includes('serviceworker'), hasAMP: htmlLower.includes('⚡') || htmlLower.includes('amp-') || htmlLower.includes('amphtml') };
 }
 
 // ============================================
