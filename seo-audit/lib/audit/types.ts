@@ -1,67 +1,95 @@
 // lib/audit/types.ts
 
+/* ============================================================================
+ * CORE ENUMS & PRIMITIVES
+ * ========================================================================== */
+
+export type Severity = 'critical' | 'high' | 'medium' | 'low';
+
+export type FetchMethod = 'url' | 'html';
+
+export type RenderMethod = 'ssr' | 'csr' | 'static' | 'unknown';
+
+/* ============================================================================
+ * AUDIT ISSUES
+ * ========================================================================== */
+
 export interface AuditIssue {
-  id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  category: string;
-  issue: string;
-  issueGe: string;
-  location: string;
-  fix: string;
-  fixGe: string;
-  current?: string;
-  details?: string;
+  readonly id: string;
+  readonly severity: Severity;
+  readonly category: string;
+  readonly issue: string;
+  readonly issueGe: string;
+  readonly location: string;
+  readonly fix: string;
+  readonly fixGe: string;
+  readonly current?: string;
+  readonly details?: string;
+}
+
+/* ============================================================================
+ * TECHNICAL SEO
+ * ========================================================================== */
+
+export interface TextMeta {
+  value: string;
+  length: number;
+  isOptimal: boolean;
 }
 
 export interface TechnicalData {
-  title: {
-    value: string;
-    length: number;
-    isOptimal: boolean;
-  };
-  metaDesc: {
-    value: string;
-    length: number;
-    isOptimal: boolean;
-  };
+  title: TextMeta;
+  metaDesc: TextMeta;
+
   canonical: {
     href: string | null;
     count: number;
     isCrossDomain: boolean;
   };
+
   robots: {
     meta: string | null;
     hasNoindex: boolean;
     hasNofollow: boolean;
     xRobotsTag: string | null;
   };
+
   robotsTxt: {
     found: boolean;
     content: string | null;
     blocksAll: boolean;
     hasSitemap: boolean;
   };
+
   sitemap: {
     found: boolean;
     url: string | null;
     urlCount?: number;
     pageInSitemap?: boolean;
   };
+
   llmsTxt: {
     found: boolean;
     mentioned: boolean;
   };
+
   language: string | null;
   charset: string | null;
+
   viewport: {
     content: string | null;
     isMobileOptimized: boolean;
   };
+
   favicon: boolean;
   appleTouchIcon: boolean;
   manifestJson: boolean;
   themeColor: string | null;
 }
+
+/* ============================================================================
+ * INTERNATIONAL SEO
+ * ========================================================================== */
 
 export interface HreflangTag {
   hreflang: string;
@@ -75,7 +103,13 @@ export interface InternationalData {
   canonicalInHreflang: boolean;
   langMatchesHreflang: boolean;
   issues: string[];
+  duplicateHreflangs: string[];
+  nonCanonicalHreflangs: string[];
 }
+
+/* ============================================================================
+ * CONTENT & READABILITY
+ * ========================================================================== */
 
 export interface ReadabilityData {
   fleschScore: number;
@@ -85,15 +119,14 @@ export interface ReadabilityData {
   complexWordPercentage: number;
 }
 
+export interface KeywordDensityItem {
+  word: string;
+  count: number;
+  percentage: number;
+}
+
 export interface ContentData {
-  headings: {
-    h1: string[];
-    h2: string[];
-    h3: string[];
-    h4: string[];
-    h5: string[];
-    h6: string[];
-  };
+  headings: Record<'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6', string[]>;
   wordCount: number;
   characterCount: number;
   sentenceCount: number;
@@ -101,32 +134,74 @@ export interface ContentData {
   readingTime: number;
   titleH1Duplicate: boolean;
   duplicateParagraphs: number;
+
   aiScore: number;
   aiPhrases: string[];
+
   readability: ReadabilityData;
-  keywordDensity: { word: string; count: number; percentage: number }[];
+  keywordDensity: KeywordDensityItem[];
+
+  detectedLanguage: 'ka' | 'ru' | 'de' | 'en';
+  titleLanguage: 'ka' | 'ru' | 'de' | 'en' | null;
+  titleContentLangMismatch: boolean;
+}
+
+/* ============================================================================
+ * LINKS
+ * ========================================================================== */
+
+export interface LinkItem {
+  href: string;
+  text: string;
+}
+
+export interface RedirectLinkItem extends LinkItem {
+  status: number;
+  location: string;
+}
+
+export interface BrokenLinkItem extends LinkItem {
+  status: number;
+  error?: string;
 }
 
 export interface LinkData {
   total: number;
   internal: number;
   external: number;
+
   broken: number;
-  brokenList: { href: string; text: string }[];
+  brokenList: BrokenLinkItem[];
+
   genericAnchors: number;
-  genericAnchorsList: { text: string; href: string }[];
+  genericAnchorsList: LinkItem[];
+
   nofollow: number;
   sponsored: number;
   ugc: number;
+
   unsafeExternalCount: number;
+
   hasFooterLinks: boolean;
   hasNavLinks: boolean;
-  internalUrls?: { href: string; text: string }[];
-  externalUrls?: { href: string; text: string }[];
+
+  internalUrls?: LinkItem[];
+  externalUrls?: LinkItem[];
+
   redirectLinks?: number;
-  redirectList?: { href: string; text: string; status: number; location: string }[];
+  redirectList?: RedirectLinkItem[];
+
   brokenExternalLinks?: number;
-  brokenExternalList?: { href: string; text: string; status: number; error?: string }[];
+  brokenExternalList?: BrokenLinkItem[];
+}
+
+/* ============================================================================
+ * IMAGES
+ * ========================================================================== */
+
+export interface ImageItem {
+  src: string;
+  alt: string;
 }
 
 export interface ImageData {
@@ -141,9 +216,12 @@ export interface ImageData {
   largeImages: number;
   modernFormats: number;
   srcsetCount: number;
+
   brokenCount?: number;
-  brokenList?: { src: string; alt: string }[];
-  imageUrls?: { src: string; alt: string }[];
+  brokenList?: ImageItem[];
+
+  imageUrls?: ImageItem[];
+
   imageSizeAnalysis?: {
     checked: number;
     largeCount: number;
@@ -152,6 +230,10 @@ export interface ImageData {
     oldFormatList: { src: string; type: string | null }[];
   };
 }
+
+/* ============================================================================
+ * SCHEMA
+ * ========================================================================== */
 
 export interface SchemaItem {
   index: string;
@@ -166,7 +248,9 @@ export interface SchemaData {
   valid: number;
   invalid: number;
   details: SchemaItem[];
+
   missingContext: number;
+
   hasWebSiteSearch: boolean;
   hasBreadcrumb: boolean;
   hasOrganization: boolean;
@@ -174,45 +258,51 @@ export interface SchemaData {
   hasHowTo: boolean;
 }
 
+/* ============================================================================
+ * SOCIAL META
+ * ========================================================================== */
+
+export interface SocialMeta {
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  url?: string | null;
+}
+
 export interface SocialData {
-  og: {
-    title: string | null;
-    description: string | null;
-    image: string | null;
-    url: string | null;
+  og: SocialMeta & {
     type: string | null;
     siteName: string | null;
     locale: string | null;
   };
-  twitter: {
+
+  twitter: SocialMeta & {
     card: string | null;
     site: string | null;
     creator: string | null;
-    title: string | null;
-    description: string | null;
-    image: string | null;
   };
+
   isComplete: boolean;
   hasArticleTags: boolean;
 }
 
+/* ============================================================================
+ * ACCESSIBILITY
+ * ========================================================================== */
+
 export interface AriaData {
-  landmarks: {
-    main: number;
-    nav: number;
-    header: number;
-    footer: number;
-    aside: number;
-    search: number;
-    form: number;
-    region: number;
-  };
+  landmarks: Record<
+    'main' | 'nav' | 'header' | 'footer' | 'aside' | 'search' | 'form' | 'region',
+    number
+  >;
+
   ariaLabels: number;
   ariaDescribedby: number;
   ariaLabelledby: number;
   ariaHidden: number;
   ariaLive: number;
   ariaExpanded: number;
+
   roles: string[];
   missingLandmarks: string[];
 }
@@ -223,18 +313,26 @@ export interface AccessibilityData {
   linksWithoutText: number;
   iframesWithoutTitle: number;
   skippedHeadings: string[];
+
   hasSkipLink: boolean;
   hasLangAttribute: boolean;
   clickableImagesWithoutAlt: number;
   positiveTabindex: number;
+
   hasMainLandmark: boolean;
   hasNavLandmark: boolean;
   hasFocusVisible: boolean;
+
   colorContrastIssues: number;
-  aria: AriaData;
   tablesWithoutHeaders: number;
   autoplayMedia: number;
+
+  aria: AriaData;
 }
+
+/* ============================================================================
+ * DOM & PERFORMANCE
+ * ========================================================================== */
 
 export interface DOMData {
   totalElements: number;
@@ -243,50 +341,69 @@ export interface DOMData {
   totalNodes: number;
   textNodes: number;
   commentNodes: number;
+
   inlineStyles: number;
   inlineScripts: number;
+
   emptyElements: number;
   deprecatedElements: string[];
   duplicateIds: string[];
+
   elementCounts: Record<string, number>;
 }
 
 export interface PerformanceData {
   totalScripts: number;
   totalStylesheets: number;
+
   renderBlockingScripts: number;
   renderBlockingStyles: number;
+
   asyncScripts: number;
   deferScripts: number;
   moduleScripts: number;
+
   inlineScripts: number;
   inlineStyles: number;
+
   preloads: number;
   preloadsWithoutAs: number;
   preconnects: number;
   prefetches: number;
   dnsPrefetches: number;
+
   fontsWithoutDisplay: number;
   webFonts: number;
+
   criticalCssInlined: boolean;
   hasServiceWorker: boolean;
+
   htmlSize: number;
   estimatedWeight: string;
 }
 
+/* ============================================================================
+ * SECURITY
+ * ========================================================================== */
+
 export interface SecurityData {
   isHttps: boolean;
+
   mixedContentCount: number;
   mixedContentUrls: string[];
+
   protocolRelativeCount: number;
   unsafeExternalLinks: number;
+
   hasCSP: boolean;
   hasXFrameOptions: boolean;
   hasXContentTypeOptions: boolean;
   hasReferrerPolicy: boolean;
   hasCORS: boolean;
+
   formWithoutAction: number;
   passwordFieldWithoutAutocomplete: number;
+
   ssl?: {
     valid: boolean;
     issuer?: string;
@@ -295,6 +412,7 @@ export interface SecurityData {
     daysUntilExpiry?: number;
     error?: string;
   };
+
   securityHeaders?: {
     headers: Record<string, string | null>;
     score: number;
@@ -302,12 +420,17 @@ export interface SecurityData {
   };
 }
 
+/* ============================================================================
+ * PLATFORM & TRUST
+ * ========================================================================== */
+
 export interface PlatformData {
   cms: string[];
   frameworks: string[];
   analytics: string[];
   advertising: string[];
-  renderMethod: string;
+
+  renderMethod: RenderMethod;
   isCSR: boolean;
   isPWA: boolean;
   hasAMP: boolean;
@@ -319,26 +442,35 @@ export interface TrustSignalsData {
   hasPrivacyPage: boolean;
   hasTermsPage: boolean;
   hasCookiePolicy: boolean;
+
   hasAuthor: boolean;
   hasPublishDate: boolean;
   hasModifiedDate: boolean;
   hasCopyright: boolean;
+
   hasAddress: boolean;
   hasPhone: boolean;
   hasEmail: boolean;
+
   socialLinksCount: number;
   socialPlatforms: string[];
+
   hasSSLBadge: boolean;
   hasPaymentBadges: boolean;
   hasReviews: boolean;
   hasCertifications: boolean;
 }
 
+/* ============================================================================
+ * AUDIT RESULT
+ * ========================================================================== */
+
 export interface AuditSummary {
   criticalIssues: number;
   highIssues: number;
   mediumIssues: number;
   lowIssues: number;
+
   totalChecks: number;
   passedChecks: number;
 }
@@ -347,8 +479,10 @@ export interface AuditResult {
   url: string;
   score: number;
   timestamp: string;
-  fetchMethod: 'url' | 'html';
+  fetchMethod: FetchMethod;
+
   summary: AuditSummary;
+
   technical: TechnicalData;
   international: InternationalData;
   content: ContentData;
@@ -362,6 +496,7 @@ export interface AuditResult {
   security: SecurityData;
   platform: PlatformData;
   trustSignals: TrustSignalsData;
+
   issues: AuditIssue[];
   passed: string[];
 }
