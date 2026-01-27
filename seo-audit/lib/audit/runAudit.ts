@@ -714,6 +714,61 @@ function analyzeSocial(doc: Document) {
 // ACCESSIBILITY ANALYSIS
 // ============================================
 
+// Helper function to parse color values
+function parseColor(color: string): { r: number; g: number; b: number } | null {
+  if (!color || color === 'transparent' || color === 'inherit' || color === 'initial') return null;
+
+  // Handle rgb/rgba
+  const rgbMatch = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (rgbMatch) {
+    return { r: parseInt(rgbMatch[1]), g: parseInt(rgbMatch[2]), b: parseInt(rgbMatch[3]) };
+  }
+
+  // Handle hex colors
+  const hexMatch = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  if (hexMatch) {
+    return { r: parseInt(hexMatch[1], 16), g: parseInt(hexMatch[2], 16), b: parseInt(hexMatch[3], 16) };
+  }
+
+  // Handle short hex
+  const shortHexMatch = color.match(/^#?([a-f\d])([a-f\d])([a-f\d])$/i);
+  if (shortHexMatch) {
+    return {
+      r: parseInt(shortHexMatch[1] + shortHexMatch[1], 16),
+      g: parseInt(shortHexMatch[2] + shortHexMatch[2], 16),
+      b: parseInt(shortHexMatch[3] + shortHexMatch[3], 16)
+    };
+  }
+
+  // Common color names
+  const colorNames: Record<string, { r: number; g: number; b: number }> = {
+    white: { r: 255, g: 255, b: 255 }, black: { r: 0, g: 0, b: 0 },
+    red: { r: 255, g: 0, b: 0 }, green: { r: 0, g: 128, b: 0 }, blue: { r: 0, g: 0, b: 255 },
+    gray: { r: 128, g: 128, b: 128 }, grey: { r: 128, g: 128, b: 128 },
+    yellow: { r: 255, g: 255, b: 0 }, orange: { r: 255, g: 165, b: 0 },
+    purple: { r: 128, g: 0, b: 128 }, pink: { r: 255, g: 192, b: 203 },
+  };
+  return colorNames[color.toLowerCase()] || null;
+}
+
+// Calculate relative luminance (WCAG formula)
+function getLuminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map(c => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+// Calculate contrast ratio between two colors
+function getContrastRatio(color1: { r: number; g: number; b: number }, color2: { r: number; g: number; b: number }): number {
+  const l1 = getLuminance(color1.r, color1.g, color1.b);
+  const l2 = getLuminance(color2.r, color2.g, color2.b);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function analyzeAccessibility(doc: Document, htmlLower: string) {
   const aria = analyzeAria(doc);
   const buttonsWithoutLabel = Array.from(doc.querySelectorAll('button')).filter((btn) => !btn.textContent?.trim() && !btn.getAttribute('aria-label') && !btn.getAttribute('aria-labelledby') && !btn.getAttribute('title')).length;
@@ -730,7 +785,93 @@ function analyzeAccessibility(doc: Document, htmlLower: string) {
   const tablesWithoutHeaders = Array.from(doc.querySelectorAll('table')).filter((table) => !table.querySelector('th')).length;
   const autoplayMedia = doc.querySelectorAll('video[autoplay], audio[autoplay]').length;
 
-  return { buttonsWithoutLabel, inputsWithoutLabel, linksWithoutText, iframesWithoutTitle, skippedHeadings, hasSkipLink, hasLangAttribute: !!doc.documentElement?.getAttribute('lang'), clickableImagesWithoutAlt: 0, positiveTabindex, hasMainLandmark: aria.landmarks.main > 0, hasNavLandmark: aria.landmarks.nav > 0, hasFocusVisible: htmlLower.includes(':focus-visible') || htmlLower.includes('focus-visible'), colorContrastIssues: 0, aria, tablesWithoutHeaders, autoplayMedia };
+  // Contrast checking - analyze inline styles and style attributes
+  const lowContrastElements: { element: string; text: string; colors: string; ratio: string }[] = [];
+  let colorContrastIssues = 0;
+
+  // Check elements with inline styles for contrast issues
+  const elementsWithColor = doc.querySelectorAll('[style*="color"], [style*="background"]');
+  elementsWithColor.forEach((el) => {
+    const style = el.getAttribute('style') || '';
+    const text = el.textContent?.trim().substring(0, 30) || '';
+    if (!text) return;
+
+    // Extract color and background-color from inline style
+    const colorMatch = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+    const bgMatch = style.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+
+    if (colorMatch && bgMatch) {
+      const fgColor = parseColor(colorMatch[1].trim());
+      const bgColor = parseColor(bgMatch[1].trim());
+
+      if (fgColor && bgColor) {
+        const ratio = getContrastRatio(fgColor, bgColor);
+        // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
+        if (ratio < 4.5) {
+          colorContrastIssues++;
+          if (lowContrastElements.length < 5) {
+            lowContrastElements.push({
+              element: el.tagName.toLowerCase(),
+              text: text,
+              colors: `${colorMatch[1].trim()} / ${bgMatch[1].trim()}`,
+              ratio: ratio.toFixed(2) + ':1'
+            });
+          }
+        }
+      }
+    }
+  });
+
+  // Also check CSS for problematic color combinations
+  const styleContent = Array.from(doc.querySelectorAll('style')).map(s => s.textContent || '').join(' ');
+
+  // Common problematic combinations to flag
+  const problematicPatterns = [
+    { pattern: /color\s*:\s*#?(?:ccc|ddd|999|888|aaa|bbb)/i, desc: 'Light gray text' },
+    { pattern: /color\s*:\s*(?:lightgray|lightgrey|silver)/i, desc: 'Light gray text' },
+    { pattern: /background\s*:\s*#?(?:ff0|yellow).*color\s*:\s*#?(?:fff|white)/i, desc: 'White on yellow' },
+  ];
+
+  problematicPatterns.forEach(({ pattern, desc }) => {
+    if (pattern.test(styleContent) || pattern.test(htmlLower)) {
+      colorContrastIssues++;
+      if (lowContrastElements.length < 5) {
+        lowContrastElements.push({
+          element: 'CSS',
+          text: desc,
+          colors: 'სტილის ანალიზი',
+          ratio: '< 4.5:1'
+        });
+      }
+    }
+  });
+
+  // Check for very light text colors in inline styles throughout the document
+  const lightTextRegex = /color\s*:\s*#?(?:[def][def][def]|(?:rgb|rgba)\s*\(\s*(?:2[0-4]\d|25[0-5])\s*,\s*(?:2[0-4]\d|25[0-5])\s*,\s*(?:2[0-4]\d|25[0-5]))/gi;
+  const lightTextMatches = htmlLower.match(lightTextRegex) || [];
+  if (lightTextMatches.length > 0) {
+    colorContrastIssues += Math.min(lightTextMatches.length, 3);
+  }
+
+  // Contrast score calculation
+  const passedWCAG_AA = colorContrastIssues === 0;
+  const passedWCAG_AAA = colorContrastIssues === 0 && lowContrastElements.length === 0;
+  const contrastScore = Math.max(0, 100 - (colorContrastIssues * 15));
+
+  const contrastDetails = {
+    lowContrastElements,
+    passedWCAG_AA,
+    passedWCAG_AAA,
+    score: contrastScore
+  };
+
+  return {
+    buttonsWithoutLabel, inputsWithoutLabel, linksWithoutText, iframesWithoutTitle, skippedHeadings,
+    hasSkipLink, hasLangAttribute: !!doc.documentElement?.getAttribute('lang'), clickableImagesWithoutAlt: 0,
+    positiveTabindex, hasMainLandmark: aria.landmarks.main > 0, hasNavLandmark: aria.landmarks.nav > 0,
+    hasFocusVisible: htmlLower.includes(':focus-visible') || htmlLower.includes('focus-visible'),
+    colorContrastIssues, contrastDetails, aria, tablesWithoutHeaders, autoplayMedia
+  };
 }
 
 // ============================================
