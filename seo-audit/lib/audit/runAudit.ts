@@ -27,7 +27,7 @@ export async function runAudit(
 
   const technical = analyzeTechnical(doc, sourceUrl, htmlLower, options);
   const international = analyzeInternational(doc, sourceUrl, technical.canonical.href, technical.language);
-  const content = analyzeContent(doc, htmlLower, technical.title.value);
+  const content = analyzeContent(doc, htmlLower, technical.title.value, technical.language);
   const links = analyzeLinks(doc, sourceUrl);
   const images = analyzeImages(doc);
   const schema = analyzeSchema(doc);
@@ -107,13 +107,20 @@ function countSyllables(word: string, lang: 'ka' | 'ru' | 'de' | 'en'): number {
 
   if (lang === 'ka') {
     // Georgian vowels: ა, ე, ი, ო, უ
-    const vowels = word.match(/[აეიოუ]/g);
+    // Filter to only Georgian letters first
+    const georgianWord = word.replace(/[^\u10A0-\u10FF]/g, '');
+    if (!georgianWord) return 1;
+    const vowels = georgianWord.match(/[აეიოუ]/g);
+    // Georgian words tend to have more syllables per word
     return vowels ? Math.max(1, vowels.length) : 1;
   }
 
   if (lang === 'ru') {
     // Russian vowels: а, е, ё, и, о, у, ы, э, ю, я
-    const vowels = word.match(/[аеёиоуыэюя]/g);
+    // Filter to only Cyrillic letters
+    const cyrillicWord = word.replace(/[^\u0400-\u04FF]/g, '');
+    if (!cyrillicWord) return 1;
+    const vowels = cyrillicWord.match(/[аеёиоуыэюя]/g);
     return vowels ? Math.max(1, vowels.length) : 1;
   }
 
@@ -121,9 +128,12 @@ function countSyllables(word: string, lang: 'ka' | 'ru' | 'de' | 'en'): number {
     // German vowels including umlauts
     const cleanWord = word.replace(/[^a-zäöüß]/g, '');
     if (!cleanWord) return 1;
-    // German diphthongs count as 1 syllable: ei, ie, eu, äu, au
-    let processed = cleanWord.replace(/ei|ie|eu|äu|au/g, 'X');
-    const vowels = processed.match(/[aeiouäöüX]/g);
+    // German diphthongs count as 1 syllable: ei, ie, eu, äu, au, oi, ey, ay
+    // Also handle: tion, sion (2 syllables each)
+    let processed = cleanWord
+      .replace(/tion|sion/g, 'XX')  // These are 2 syllables
+      .replace(/ei|ie|eu|äu|au|oi|ey|ay|ee|oo/g, 'V');  // Single syllable diphthongs
+    const vowels = processed.match(/[aeiouäöüVX]/g);
     return vowels ? Math.max(1, vowels.length) : 1;
   }
 
@@ -177,12 +187,20 @@ function calculateReadability(text: string): ReadabilityData {
   // Language-specific Flesch formulas
   let fleschScore: number;
   if (lang === 'de') {
-    // German Flesch formula (Amstad)
-    fleschScore = 180 - avgSentenceLength - (58.5 * avgSyllablesPerWord);
-  } else if (lang === 'ka' || lang === 'ru') {
-    // Adapted formula for Georgian/Russian (syllable-based languages)
-    // These languages have more syllables per word on average
-    fleschScore = 206.835 - (1.3 * avgSentenceLength) - (60.1 * avgSyllablesPerWord);
+    // German Flesch formula (Amstad) - adjusted for longer German words
+    // German words average ~2.5 syllables vs English ~1.5
+    // Standard Amstad: 180 - ASL - (58.5 * ASW)
+    // We use a slightly reduced coefficient for syllables to account for German morphology
+    fleschScore = 180 - avgSentenceLength - (52 * avgSyllablesPerWord);
+  } else if (lang === 'ka') {
+    // Georgian adapted formula
+    // Georgian is agglutinative with many suffixes, average ~3 syllables per word
+    // Use a formula that doesn't penalize as heavily for syllable count
+    fleschScore = 206.835 - (1.015 * avgSentenceLength) - (40 * avgSyllablesPerWord);
+  } else if (lang === 'ru') {
+    // Russian adapted formula
+    // Russian averages ~2.5 syllables per word
+    fleschScore = 206.835 - (1.3 * avgSentenceLength) - (50 * avgSyllablesPerWord);
   } else {
     // English Flesch formula
     fleschScore = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
@@ -286,6 +304,8 @@ function analyzeAria(doc: Document): AriaData {
 
 function analyzeTechnical(doc: Document, sourceUrl: string, htmlLower: string, options?: { robotsTxt?: string | null; sitemapFound?: boolean; llmsTxtFound?: boolean }) {
   const title = doc.querySelector('title')?.textContent?.trim() || '';
+  const h1Element = doc.querySelector('h1');
+  const visibleTitle = h1Element?.textContent?.trim() || title; // H1 is the visible title, fallback to <title>
   const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
   const canonicals = doc.querySelectorAll('link[rel="canonical"]');
   const canonicalHref = canonicals[0]?.getAttribute('href') || null;
@@ -300,7 +320,7 @@ function analyzeTechnical(doc: Document, sourceUrl: string, htmlLower: string, o
   const robotsTxt = options?.robotsTxt;
 
   return {
-    title: { value: title, length: title.length, isOptimal: title.length >= 30 && title.length <= 60 },
+    title: { value: title, visibleTitle, length: title.length, isOptimal: title.length >= 30 && title.length <= 60 },
     metaDesc: { value: metaDesc, length: metaDesc.length, isOptimal: metaDesc.length >= 120 && metaDesc.length <= 160 },
     canonical: { href: canonicalHref, count: canonicals.length, isCrossDomain },
     robots: { meta: robotsMeta, hasNoindex: (robotsMeta?.includes('noindex') || googlebotMeta.includes('noindex')) ?? false, hasNofollow: robotsMeta?.includes('nofollow') ?? false, xRobotsTag: null },
@@ -422,7 +442,7 @@ function getReadableText(doc: Document): string {
   return text;
 }
 
-function analyzeContent(doc: Document, htmlLower: string, title: string) {
+function analyzeContent(doc: Document, htmlLower: string, title: string, htmlLang: string | null) {
   const headings = {
     h1: Array.from(doc.querySelectorAll('h1')).map((h) => h.textContent?.trim() || ''),
     h2: Array.from(doc.querySelectorAll('h2')).map((h) => h.textContent?.trim() || ''),
@@ -457,19 +477,35 @@ function analyzeContent(doc: Document, htmlLower: string, title: string) {
 
   const readability = calculateReadability(bodyText);
 
-  // Detect actual content language
-  const detectedLanguage = detectLanguage(bodyText);
+  // Detect actual content language - prioritize HTML lang attribute
+  const contentLanguage = detectLanguage(bodyText);
 
-  // Detect title language (if title is long enough)
-  const titleLanguage = title.length > 10 ? detectLanguage(title) : null;
+  // Map HTML lang attribute to our language codes
+  let declaredLanguage: 'ka' | 'ru' | 'de' | 'en' | null = null;
+  if (htmlLang) {
+    const langCode = htmlLang.toLowerCase().split('-')[0];
+    if (langCode === 'ka') declaredLanguage = 'ka';
+    else if (langCode === 'ru' || langCode === 'uk' || langCode === 'be') declaredLanguage = 'ru'; // Ukrainian, Belarusian treated as Russian for readability
+    else if (langCode === 'de') declaredLanguage = 'de';
+    else if (langCode === 'en') declaredLanguage = 'en';
+  }
+
+  // Use declared language if available, otherwise use detected language
+  const detectedLanguage = declaredLanguage || contentLanguage;
+
+  // Detect H1/visible title language
+  const visibleTitleText = headings.h1[0] || title;
+  const titleLanguage = visibleTitleText.length > 10 ? detectLanguage(visibleTitleText) : null;
 
   // Check if title language matches content language
   const titleContentLangMismatch = titleLanguage && detectedLanguage && titleLanguage !== detectedLanguage;
 
+  // Keyword extraction - include Georgian, Cyrillic, German umlauts
   const wordFreq: Record<string, number> = {};
   words.forEach((w) => {
-    const word = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (word.length > 3 && !PATTERNS.STOP_WORDS.has(word)) wordFreq[word] = (wordFreq[word] || 0) + 1;
+    // Keep Georgian (U+10A0-U+10FF), Cyrillic (U+0400-U+04FF), Latin + German umlauts
+    const word = w.toLowerCase().replace(/[^\u10A0-\u10FF\u0400-\u04FFa-z0-9äöüß]/g, '');
+    if (word.length > 2 && !PATTERNS.STOP_WORDS.has(word)) wordFreq[word] = (wordFreq[word] || 0) + 1;
   });
   const keywordDensity = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count, percentage: Math.round((count / wordCount) * 10000) / 100 }));
 

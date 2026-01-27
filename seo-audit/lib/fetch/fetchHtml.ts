@@ -87,31 +87,43 @@ export async function checkLlmsTxt(baseUrl: string): Promise<{ found: boolean; c
   for (const path of paths) {
     try {
       const url = new URL(path, baseUrl).href;
-      const result = await fetchHtml(url, 8000); // Increased timeout
+      const result = await fetchHtml(url, 8000);
+
+      if (result.status !== 200) {
+        continue;
+      }
 
       const content = result.html.trim();
-      const lowerContent = content.toLowerCase();
 
-      // Reject HTML or HTML-like responses (Cloudflare, WAF, error pages)
-      const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+      // Skip empty responses
+      if (content.length < 10) {
+        continue;
+      }
+
+      // Reject HTML responses (error pages, WAF, etc.)
+      // Check for common HTML markers
+      const isHtml = content.startsWith('<!') ||
+                     content.startsWith('<html') ||
+                     content.startsWith('<HTML') ||
+                     /<html[\s>]/i.test(content) ||
+                     /<head[\s>]/i.test(content) ||
+                     /<body[\s>]/i.test(content);
       if (isHtml) {
         continue;
       }
 
-      // Require llms.txt–specific structure (not vague keywords)
-      const hasLlmsStructure =
-        /^#\s*llms?/im.test(content) ||
-        /^name:\s*/im.test(content) ||
-        /^description:\s*/im.test(content) ||
-        /^policies:\s*/im.test(content) ||
-        /^allow:\s*/im.test(content);
+      // Accept any valid plain text file that looks like llms.txt
+      // Valid llms.txt typically contains: comments (#), key:value pairs, URLs, or markdown-like content
+      const hasValidContent =
+        /^#/m.test(content) ||                          // Has comments
+        /^[a-zA-Z_-]+:\s*/m.test(content) ||           // Has key: value format
+        /^>\s*/m.test(content) ||                       // Has markdown quotes
+        /^-\s+/m.test(content) ||                       // Has markdown lists
+        /https?:\/\//i.test(content) ||                 // Contains URLs
+        /\.(md|txt|html|pdf)$/im.test(content) ||       // References files
+        content.split('\n').length >= 3;                // Has multiple lines
 
-      // Final validation
-      if (
-        result.status === 200 &&
-        content.length > 20 &&
-        hasLlmsStructure
-      ) {
+      if (hasValidContent) {
         return { found: true, content: content.substring(0, 500) };
       }
     } catch {
@@ -266,7 +278,7 @@ export async function checkSSLCertificate(url: string): Promise<{
   });
 }
 
-// Check security headers
+// Check security headers - uses GET request for better header detection
 export async function checkSecurityHeaders(url: string): Promise<{
   headers: Record<string, string | null>;
   score: number;
@@ -278,51 +290,94 @@ export async function checkSecurityHeaders(url: string): Promise<{
       const isHttps = parsed.protocol === 'https:';
       const lib = isHttps ? https : http;
 
+      // Use GET instead of HEAD - many servers don't send security headers on HEAD requests
       const req = lib.request({
         hostname: parsed.hostname,
         port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname,
-        method: 'HEAD',
-        timeout: 5000,
+        path: parsed.pathname || '/',
+        method: 'GET',
+        timeout: 8000,
         headers: { ...HEADERS, Host: parsed.hostname },
       }, (res) => {
+        // Consume response body to prevent socket hanging
+        res.on('data', () => {});
+        res.on('end', () => {});
+
         const h = res.headers;
         const issues: string[] = [];
         let score = 100;
 
-        const headers = {
-          'strict-transport-security': h['strict-transport-security'] as string || null,
-          'content-security-policy': h['content-security-policy'] as string || null,
-          'x-frame-options': h['x-frame-options'] as string || null,
-          'x-content-type-options': h['x-content-type-options'] as string || null,
-          'x-xss-protection': h['x-xss-protection'] as string || null,
-          'referrer-policy': h['referrer-policy'] as string || null,
-          'permissions-policy': h['permissions-policy'] as string || null,
+        // Helper function to get header value (handles case variations)
+        const getHeader = (name: string): string | null => {
+          // Node.js lowercases all header names
+          const value = h[name.toLowerCase()];
+          if (Array.isArray(value)) return value[0] || null;
+          return value as string || null;
         };
 
-        // Check and score each header
+        const headers = {
+          'strict-transport-security': getHeader('strict-transport-security'),
+          'content-security-policy': getHeader('content-security-policy'),
+          'x-frame-options': getHeader('x-frame-options'),
+          'x-content-type-options': getHeader('x-content-type-options'),
+          'x-xss-protection': getHeader('x-xss-protection'),
+          'referrer-policy': getHeader('referrer-policy'),
+          'permissions-policy': getHeader('permissions-policy'),
+        };
+
+        // Score based on presence of security headers
+        // HSTS - only required for HTTPS sites (15 points)
         if (!headers['strict-transport-security'] && isHttps) {
           issues.push('Missing Strict-Transport-Security (HSTS)');
           score -= 15;
+        } else if (headers['strict-transport-security']) {
+          // Check HSTS quality
+          const hsts = headers['strict-transport-security'].toLowerCase();
+          if (!hsts.includes('max-age') || parseInt(hsts.match(/max-age=(\d+)/)?.[1] || '0') < 31536000) {
+            issues.push('HSTS max-age should be at least 1 year (31536000)');
+            score -= 5;
+          }
         }
+
+        // CSP - 15 points
         if (!headers['content-security-policy']) {
           issues.push('Missing Content-Security-Policy');
           score -= 15;
         }
-        if (!headers['x-frame-options']) {
+
+        // X-Frame-Options - 10 points (or frame-ancestors in CSP)
+        const csp = headers['content-security-policy']?.toLowerCase() || '';
+        if (!headers['x-frame-options'] && !csp.includes('frame-ancestors')) {
           issues.push('Missing X-Frame-Options (clickjacking protection)');
           score -= 10;
         }
+
+        // X-Content-Type-Options - 10 points
         if (!headers['x-content-type-options']) {
           issues.push('Missing X-Content-Type-Options');
           score -= 10;
+        } else if (headers['x-content-type-options'].toLowerCase() !== 'nosniff') {
+          issues.push('X-Content-Type-Options should be "nosniff"');
+          score -= 5;
         }
+
+        // Referrer-Policy - 5 points
         if (!headers['referrer-policy']) {
           issues.push('Missing Referrer-Policy');
           score -= 5;
         }
 
-        resolve({ headers, score: Math.max(0, score), issues });
+        // Permissions-Policy (optional, bonus)
+        if (headers['permissions-policy']) {
+          score += 5; // Bonus points for having Permissions-Policy
+        }
+
+        // X-XSS-Protection is deprecated but still adds some protection
+        if (headers['x-xss-protection'] && headers['x-xss-protection'].includes('1')) {
+          score += 2; // Small bonus for legacy protection
+        }
+
+        resolve({ headers, score: Math.max(0, Math.min(100, score)), issues });
       });
 
       req.on('error', () => resolve({ headers: {}, score: 0, issues: ['Could not check headers'] }));
@@ -334,8 +389,8 @@ export async function checkSecurityHeaders(url: string): Promise<{
   });
 }
 
-// Check if URL is in sitemap
-export async function checkUrlInSitemap(sitemapUrl: string, pageUrl: string): Promise<{ found: boolean; urlCount: number }> {
+// Check if URL is in sitemap - handles sitemap_index.xml with sub-sitemaps
+export async function checkUrlInSitemap(sitemapUrl: string, pageUrl: string): Promise<{ found: boolean; urlCount: number; sitemapCount?: number }> {
   try {
     const result = await fetchHtml(sitemapUrl, 10000);
     if (result.status !== 200) return { found: false, urlCount: 0 };
@@ -343,7 +398,66 @@ export async function checkUrlInSitemap(sitemapUrl: string, pageUrl: string): Pr
     const content = result.html;
     const normalizedPageUrl = pageUrl.toLowerCase().replace(/\/$/, '');
 
-    // Count URLs in sitemap
+    // Check if this is a sitemap index (contains <sitemapindex> or <sitemap> tags)
+    const isSitemapIndex = content.includes('<sitemapindex') || /<sitemap>[\s\S]*?<loc>/i.test(content);
+
+    if (isSitemapIndex) {
+      // Extract all sub-sitemap URLs from the index
+      const sitemapMatches = content.match(/<sitemap>[\s\S]*?<\/sitemap>/gi) || [];
+      const subSitemapUrls: string[] = [];
+
+      sitemapMatches.forEach(sitemapBlock => {
+        const locMatch = sitemapBlock.match(/<loc>([^<]+)<\/loc>/i);
+        if (locMatch && locMatch[1]) {
+          subSitemapUrls.push(locMatch[1].trim());
+        }
+      });
+
+      // If no sub-sitemaps found, try alternative parsing
+      if (subSitemapUrls.length === 0) {
+        const locMatches = content.match(/<loc>([^<]+\.xml[^<]*)<\/loc>/gi) || [];
+        locMatches.forEach(match => {
+          const url = match.replace(/<\/?loc>/gi, '').trim();
+          if (url.includes('.xml')) {
+            subSitemapUrls.push(url);
+          }
+        });
+      }
+
+      // Check each sub-sitemap for the page URL
+      let totalUrlCount = 0;
+      let found = false;
+
+      // Limit to first 10 sitemaps to avoid timeout
+      const sitemapsToCheck = subSitemapUrls.slice(0, 10);
+
+      for (const subSitemapUrl of sitemapsToCheck) {
+        try {
+          const subResult = await fetchHtml(subSitemapUrl, 8000);
+          if (subResult.status === 200) {
+            const subContent = subResult.html;
+
+            // Count URLs in this sub-sitemap
+            const urlMatches = subContent.match(/<loc>[^<]+<\/loc>/gi) || [];
+            totalUrlCount += urlMatches.length;
+
+            // Check if page URL is in this sub-sitemap
+            if (!found) {
+              found = urlMatches.some(match => {
+                const url = match.replace(/<\/?loc>/gi, '').toLowerCase().replace(/\/$/, '');
+                return url === normalizedPageUrl;
+              });
+            }
+          }
+        } catch {
+          // Continue with next sitemap on error
+        }
+      }
+
+      return { found, urlCount: totalUrlCount, sitemapCount: subSitemapUrls.length };
+    }
+
+    // Regular sitemap (not an index)
     const urlMatches = content.match(/<loc>[^<]+<\/loc>/gi) || [];
     const urlCount = urlMatches.length;
 

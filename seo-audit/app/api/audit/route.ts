@@ -201,11 +201,14 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // Check if current page is in sitemap
+        // Check if current page is in sitemap (handles sitemap_index.xml with multiple sitemaps)
         if (sitemap.found && sitemap.url) {
           const sitemapCheck = await checkUrlInSitemap(sitemap.url, finalUrl);
           result.technical.sitemap.urlCount = sitemapCheck.urlCount;
           result.technical.sitemap.pageInSitemap = sitemapCheck.found;
+          if (sitemapCheck.sitemapCount) {
+            result.technical.sitemap.sitemapCount = sitemapCheck.sitemapCount;
+          }
 
           if (!sitemapCheck.found) {
             result.issues.push({
