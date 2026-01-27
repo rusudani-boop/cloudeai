@@ -10,6 +10,8 @@ import type {
   AriaData,
   DOMData,
   RenderMethod,
+  MobileData,
+  ExternalResourcesData,
 } from './types';
 
 // ============================================
@@ -38,9 +40,11 @@ export async function runAudit(
   const security = analyzeSecurity(doc, sourceUrl, htmlLower);
   const platform = analyzePlatform(htmlLower);
   const trustSignals = analyzeTrustSignals(doc, schema);
+  const mobile = analyzeMobile(doc, html, sourceUrl);
+  const externalResources = analyzeExternalResources(doc, sourceUrl);
 
-  const issues = collectIssues({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform });
-  const passed = collectPassed({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals });
+  const issues = collectIssues({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, mobile });
+  const passed = collectPassed({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, mobile });
   const score = calculateScore(issues, passed);
 
   // Calculate actual checks performed (issues found + passed + base neutral checks)
@@ -61,7 +65,7 @@ export async function runAudit(
       totalChecks,
       passedChecks: passed.length,
     },
-    technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, issues, passed,
+    technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, mobile, externalResources, issues, passed,
   };
 }
 
@@ -821,6 +825,322 @@ function analyzeTrustSignals(doc: Document, schema: any) {
 }
 
 // ============================================
+// MOBILE FRIENDLINESS
+// ============================================
+
+function analyzeMobile(doc: Document, html: string, sourceUrl: string): MobileData {
+  const issues: string[] = [];
+  let score = 100;
+
+  // Viewport analysis
+  const viewportMeta = doc.querySelector('meta[name="viewport"]');
+  const viewportContent = viewportMeta?.getAttribute('content') || null;
+  const hasViewport = !!viewportContent;
+  const hasWidthDeviceWidth = viewportContent?.includes('width=device-width') ?? false;
+  const hasInitialScale = viewportContent?.includes('initial-scale') ?? false;
+  const hasUserScalable = viewportContent?.includes('user-scalable=no') || viewportContent?.includes('user-scalable=0') || false;
+
+  if (!hasViewport) {
+    issues.push('Viewport მეტა ტეგი არ არის - მობილურზე არასწორად გამოჩნდება');
+    score -= 25;
+  } else if (!hasWidthDeviceWidth) {
+    issues.push('Viewport არ შეიცავს width=device-width');
+    score -= 10;
+  }
+  if (hasUserScalable) {
+    issues.push('user-scalable=no აფერხებს მასშტაბირებას - ხელმისაწვდომობის პრობლემა');
+    score -= 10;
+  }
+
+  // Mobile-specific meta tags
+  const hasThemeColor = !!doc.querySelector('meta[name="theme-color"]');
+  const hasAppleMobileWebAppCapable = !!doc.querySelector('meta[name="apple-mobile-web-app-capable"]');
+  const hasAppleTouchIcon = !!doc.querySelector('link[rel="apple-touch-icon"]');
+  const hasManifest = !!doc.querySelector('link[rel="manifest"]');
+
+  // Tap target analysis - find small clickable elements
+  const clickables = doc.querySelectorAll('a, button, input[type="button"], input[type="submit"], [onclick]');
+  const tapTargetsList: { element: string; size: string }[] = [];
+  let smallTapTargets = 0;
+
+  clickables.forEach((el) => {
+    // Check for inline styles that specify small sizes
+    const style = el.getAttribute('style') || '';
+    const widthMatch = style.match(/width\s*:\s*(\d+)px/);
+    const heightMatch = style.match(/height\s*:\s*(\d+)px/);
+    const paddingMatch = style.match(/padding\s*:\s*(\d+)px/);
+
+    // Also check class names for common small button patterns
+    const className = el.className?.toString() || '';
+    const isLikelySmall = className.includes('icon') || className.includes('small') || className.includes('mini');
+
+    if (widthMatch && parseInt(widthMatch[1]) < 44) {
+      smallTapTargets++;
+      if (tapTargetsList.length < 5) {
+        tapTargetsList.push({ element: el.tagName.toLowerCase(), size: `${widthMatch[1]}px` });
+      }
+    } else if (heightMatch && parseInt(heightMatch[1]) < 44) {
+      smallTapTargets++;
+      if (tapTargetsList.length < 5) {
+        tapTargetsList.push({ element: el.tagName.toLowerCase(), size: `${heightMatch[1]}px` });
+      }
+    } else if (isLikelySmall && !paddingMatch) {
+      smallTapTargets++;
+      if (tapTargetsList.length < 5) {
+        tapTargetsList.push({ element: el.tagName.toLowerCase(), size: 'პატარა (კლასი)' });
+      }
+    }
+  });
+
+  if (smallTapTargets > 5) {
+    issues.push(`${smallTapTargets} პატარა tap target - მინიმუმ 44x44px საჭიროა`);
+    score -= Math.min(15, smallTapTargets);
+  }
+
+  // Text size analysis - look for small font sizes in styles
+  const htmlLower = html.toLowerCase();
+  const smallFontMatches = htmlLower.match(/font-size\s*:\s*(\d+)px/g) || [];
+  let smallTextElements = 0;
+  smallFontMatches.forEach((match) => {
+    const size = parseInt(match.match(/(\d+)/)?.[1] || '16');
+    if (size < 12) smallTextElements++;
+  });
+
+  // Check for relative font sizes (good practice)
+  const usesRelativeFontSizes = htmlLower.includes('font-size:') &&
+    (htmlLower.includes('rem') || htmlLower.includes('em') || htmlLower.includes('%'));
+
+  if (smallTextElements > 3) {
+    issues.push(`${smallTextElements} ელემენტს აქვს <12px ფონტი - წაკითხვა რთულია მობილურზე`);
+    score -= 5;
+  }
+
+  // Media queries analysis
+  const mediaQueryMatches = html.match(/@media[^{]+\{/g) || [];
+  const hasMediaQueries = mediaQueryMatches.length > 0;
+  const mediaQueryCount = mediaQueryMatches.length;
+
+  // Flexbox and Grid
+  const hasFlexbox = htmlLower.includes('display: flex') || htmlLower.includes('display:flex');
+  const hasGrid = htmlLower.includes('display: grid') || htmlLower.includes('display:grid');
+
+  if (!hasMediaQueries && !hasFlexbox && !hasGrid) {
+    issues.push('რესპონსიული დიზაინი არ არის აღმოჩენილი (არც media queries, არც flexbox/grid)');
+    score -= 15;
+  }
+
+  // Fixed width analysis - look for elements with fixed widths > 320px
+  const fixedWidthMatches = html.match(/width\s*:\s*(\d+)px/g) || [];
+  let fixedWidthElements = 0;
+  let horizontalScrollRisk = false;
+
+  fixedWidthMatches.forEach((match) => {
+    const width = parseInt(match.match(/(\d+)/)?.[1] || '0');
+    if (width > 320) {
+      fixedWidthElements++;
+      if (width > 500) horizontalScrollRisk = true;
+    }
+  });
+
+  if (horizontalScrollRisk) {
+    issues.push('ელემენტები ფიქსირებული სიგანით >500px - ჰორიზონტალური scroll მობილურზე');
+    score -= 10;
+  }
+
+  // Responsive images
+  const images = doc.querySelectorAll('img');
+  const totalImages = images.length;
+  let responsiveImagesCount = 0;
+
+  images.forEach((img) => {
+    if (img.hasAttribute('srcset') || img.closest('picture')) {
+      responsiveImagesCount++;
+    }
+  });
+
+  if (totalImages > 5 && responsiveImagesCount < totalImages * 0.3) {
+    issues.push(`მხოლოდ ${responsiveImagesCount}/${totalImages} სურათს აქვს srcset - მობილურზე დიდ სურათებს ჩატვირთავს`);
+    score -= 5;
+  }
+
+  // Bonus points
+  if (hasManifest) score += 5;
+  if (hasThemeColor) score += 2;
+  if (usesRelativeFontSizes) score += 3;
+
+  return {
+    hasViewport,
+    viewportContent,
+    hasWidthDeviceWidth,
+    hasInitialScale,
+    hasUserScalable,
+    smallTapTargets,
+    tapTargetsList,
+    smallTextElements,
+    usesRelativeFontSizes,
+    hasMediaQueries,
+    mediaQueryCount,
+    hasFlexbox,
+    hasGrid,
+    horizontalScrollRisk,
+    fixedWidthElements,
+    hasThemeColor,
+    hasAppleMobileWebAppCapable,
+    hasAppleTouchIcon,
+    hasManifest,
+    responsiveImagesCount,
+    totalImages,
+    score: Math.max(0, Math.min(100, score)),
+    issues
+  };
+}
+
+// ============================================
+// EXTERNAL RESOURCES
+// ============================================
+
+function analyzeExternalResources(doc: Document, sourceUrl: string): ExternalResourcesData {
+  let sourceDomain = '';
+  try {
+    sourceDomain = new URL(sourceUrl).hostname;
+  } catch {}
+
+  const isThirdParty = (url: string): boolean => {
+    try {
+      const urlDomain = new URL(url, sourceUrl).hostname;
+      return urlDomain !== sourceDomain;
+    } catch {
+      return false;
+    }
+  };
+
+  const getDomain = (url: string): string => {
+    try {
+      return new URL(url, sourceUrl).hostname;
+    } catch {
+      return '';
+    }
+  };
+
+  // CSS Files
+  const stylesheets = doc.querySelectorAll('link[rel="stylesheet"]');
+  const cssFiles: { url: string; isThirdParty: boolean }[] = [];
+
+  stylesheets.forEach((link) => {
+    const href = link.getAttribute('href');
+    if (href) {
+      cssFiles.push({
+        url: href,
+        isThirdParty: isThirdParty(href)
+      });
+    }
+  });
+
+  // JavaScript Files
+  const scripts = doc.querySelectorAll('script[src]');
+  const jsFiles: { url: string; isThirdParty: boolean; async: boolean; defer: boolean; module: boolean }[] = [];
+
+  scripts.forEach((script) => {
+    const src = script.getAttribute('src');
+    if (src) {
+      jsFiles.push({
+        url: src,
+        isThirdParty: isThirdParty(src),
+        async: script.hasAttribute('async'),
+        defer: script.hasAttribute('defer'),
+        module: script.getAttribute('type') === 'module'
+      });
+    }
+  });
+
+  // Font Files
+  const fontFiles: { url: string; format: string | null }[] = [];
+  const googleFonts: string[] = [];
+
+  // Check link tags for fonts
+  doc.querySelectorAll('link[rel="preload"][as="font"], link[href*="fonts.googleapis.com"], link[href*="fonts.gstatic.com"]').forEach((link) => {
+    const href = link.getAttribute('href');
+    if (href) {
+      if (href.includes('fonts.googleapis.com')) {
+        // Extract font family names from Google Fonts URL
+        const familyMatch = href.match(/family=([^&]+)/);
+        if (familyMatch) {
+          const families = familyMatch[1].split('|').map(f => f.split(':')[0].replace(/\+/g, ' '));
+          googleFonts.push(...families);
+        }
+      }
+      fontFiles.push({
+        url: href,
+        format: href.includes('.woff2') ? 'woff2' : href.includes('.woff') ? 'woff' : href.includes('.ttf') ? 'ttf' : null
+      });
+    }
+  });
+
+  // Also check @font-face in style tags
+  const styleTags = doc.querySelectorAll('style');
+  styleTags.forEach((style) => {
+    const content = style.textContent || '';
+    const fontFaceMatches = content.match(/url\(['"]?([^'")\s]+\.(woff2?|ttf|otf|eot))['"]?\)/gi) || [];
+    fontFaceMatches.forEach((match) => {
+      const urlMatch = match.match(/url\(['"]?([^'")\s]+)['"]?\)/);
+      if (urlMatch) {
+        fontFiles.push({
+          url: urlMatch[1],
+          format: urlMatch[1].includes('.woff2') ? 'woff2' : urlMatch[1].includes('.woff') ? 'woff' : 'other'
+        });
+      }
+    });
+  });
+
+  // Collect all third-party domains
+  const thirdPartyDomainsSet = new Set<string>();
+
+  cssFiles.forEach((f) => {
+    if (f.isThirdParty) thirdPartyDomainsSet.add(getDomain(f.url));
+  });
+  jsFiles.forEach((f) => {
+    if (f.isThirdParty) thirdPartyDomainsSet.add(getDomain(f.url));
+  });
+  fontFiles.forEach((f) => {
+    const domain = getDomain(f.url);
+    if (domain && domain !== sourceDomain) thirdPartyDomainsSet.add(domain);
+  });
+
+  // Also check images for third-party domains
+  doc.querySelectorAll('img[src]').forEach((img) => {
+    const src = img.getAttribute('src');
+    if (src && isThirdParty(src)) {
+      thirdPartyDomainsSet.add(getDomain(src));
+    }
+  });
+
+  const thirdPartyDomains = Array.from(thirdPartyDomainsSet).filter(Boolean);
+
+  // Suggest preconnects for frequently used third-party domains
+  const suggestedPreconnects: string[] = [];
+  thirdPartyDomains.forEach((domain) => {
+    // Check if already has preconnect
+    const hasPreconnect = !!doc.querySelector(`link[rel="preconnect"][href*="${domain}"]`);
+    if (!hasPreconnect && domain) {
+      suggestedPreconnects.push(domain);
+    }
+  });
+
+  return {
+    cssFiles,
+    cssCount: cssFiles.length,
+    jsFiles,
+    jsCount: jsFiles.length,
+    fontFiles,
+    fontCount: fontFiles.length,
+    googleFonts: [...new Set(googleFonts)],
+    thirdPartyDomains,
+    thirdPartyCount: thirdPartyDomains.length,
+    suggestedPreconnects: suggestedPreconnects.slice(0, 5)
+  };
+}
+
+// ============================================
 // COLLECT ISSUES
 // ============================================
 
@@ -834,7 +1154,7 @@ const SEVERITY_PHRASES = {
 
 function collectIssues(data: any): AuditIssue[] {
   const issues: AuditIssue[] = [];
-  const { technical, international, content, links, images, schema, social, accessibility, dom, performance, security, platform } = data;
+  const { technical, international, content, links, images, schema, social, accessibility, dom, performance, security, platform, mobile } = data;
 
   // Title - CRITICAL for SEO
   if (!technical.title.value) issues.push({ id: 'no-title', severity: 'critical', category: 'ტექნიკური', issue: 'Missing title tag', issueGe: 'სათაური არ არის', location: '<head>', fix: 'Add <title>Your Page Title</title> in <head>', fixGe: 'დაამატეთ <title>თქვენი სათაური</title> <head>-ში', details: `${SEVERITY_PHRASES.critical} Title tag არის SEO-ს ყველაზე მნიშვნელოვანი ელემენტი. Google იყენებს მას ძიების შედეგებში. მის გარეშე გვერდი ვერ დარანჟირდება სათანადოდ.` });
@@ -981,6 +1301,18 @@ function collectIssues(data: any): AuditIssue[] {
   // Favicon
   if (!technical.favicon) issues.push({ id: 'no-favicon', severity: 'low', category: 'ტექნიკური', issue: 'No favicon found', issueGe: 'Favicon არ არის', location: '<head>', fix: 'Add <link rel="icon" href="/favicon.ico">', fixGe: 'დაამატეთ favicon', details: `${SEVERITY_PHRASES.low} Favicon ჩნდება ბრაუზერის ტაბზე და ბუკმარკებში. პროფესიონალური იმიჯისთვის აუცილებელია.` });
 
+  // Mobile Friendliness
+  if (mobile && mobile.score < 50) issues.push({ id: 'mobile-poor', severity: 'critical', category: 'მობილური', issue: `Poor mobile friendliness score (${mobile.score}/100)`, issueGe: `დაბალი მობილური მეგობრულობა (${mobile.score}/100)`, location: 'გვერდი', fix: 'Fix mobile issues: viewport, tap targets, responsive design', fixGe: 'გაასწორეთ მობილური პრობლემები', details: `${SEVERITY_PHRASES.critical} მობილური ტრაფიკი 60%+-ია. დაბალი მობილური ქულა პირდაპირ აზარალებს რანჟირებას. პრობლემები: ${mobile.issues.slice(0, 3).join('; ')}` });
+  else if (mobile && mobile.score < 70) issues.push({ id: 'mobile-needs-work', severity: 'high', category: 'მობილური', issue: `Mobile friendliness needs improvement (${mobile.score}/100)`, issueGe: `მობილურზე გაუმჯობესება საჭიროა (${mobile.score}/100)`, location: 'გვერდი', fix: 'Improve responsive design and tap targets', fixGe: 'გააუმჯობესეთ რესპონსიული დიზაინი', details: `${SEVERITY_PHRASES.high} პრობლემები: ${mobile.issues.slice(0, 3).join('; ')}` });
+
+  if (mobile && mobile.smallTapTargets > 10) issues.push({ id: 'small-tap-targets', severity: 'high', category: 'მობილური', issue: `${mobile.smallTapTargets} small tap targets detected`, issueGe: `${mobile.smallTapTargets} პატარა tap target აღმოჩენილია`, location: 'ბმულები/ღილაკები', fix: 'Ensure tap targets are at least 48x48px with 8px spacing', fixGe: 'გაზარდეთ tap targets მინიმუმ 48x48px-მდე', details: `${SEVERITY_PHRASES.high} მომხმარებლები ვერ ახერხებენ პატარა ელემენტებზე დაჭერას მობილურზე. Google-ის რეკომენდაცია: მინიმუმ 48x48px.` });
+
+  if (mobile && mobile.horizontalScrollRisk) issues.push({ id: 'horizontal-scroll', severity: 'high', category: 'მობილური', issue: 'Page may require horizontal scrolling on mobile', issueGe: 'გვერდს შეიძლება სჭირდეს ჰორიზონტალური scroll მობილურზე', location: 'ფიქსირებული სიგანის ელემენტები', fix: 'Use max-width: 100% and responsive units', fixGe: 'გამოიყენეთ max-width: 100% და რესპონსიული ერთეულები', details: `${SEVERITY_PHRASES.high} ფიქსირებული სიგანის ელემენტები იწვევს ჰორიზონტალურ scroll-ს. გამოიყენეთ % ან vw ერთეულები.` });
+
+  if (mobile && !mobile.hasMediaQueries && !mobile.hasFlexbox && !mobile.hasGrid) issues.push({ id: 'no-responsive', severity: 'high', category: 'მობილური', issue: 'No responsive design detected', issueGe: 'რესპონსიული დიზაინი არ არის აღმოჩენილი', location: 'CSS', fix: 'Add media queries or use flexbox/grid', fixGe: 'დაამატეთ media queries ან flexbox/grid', details: `${SEVERITY_PHRASES.high} რესპონსიული დიზაინი აუცილებელია მობილური მოწყობილობებისთვის. გამოიყენეთ @media queries, flexbox ან CSS grid.` });
+
+  if (mobile && mobile.hasUserScalable) issues.push({ id: 'no-zoom', severity: 'medium', category: 'ხელმისაწვდომობა', issue: 'Zooming is disabled (user-scalable=no)', issueGe: 'მასშტაბირება გამორთულია (user-scalable=no)', location: '<meta name="viewport">', fix: 'Remove user-scalable=no from viewport', fixGe: 'წაშალეთ user-scalable=no viewport-იდან', details: `${SEVERITY_PHRASES.medium} მასშტაბირების გამორთვა აფერხებს მხედველობის პრობლემის მქონე მომხმარებლებს. WCAG მოითხოვს მასშტაბირების შესაძლებლობას.` });
+
   return issues;
 }
 
@@ -990,7 +1322,7 @@ function collectIssues(data: any): AuditIssue[] {
 
 function collectPassed(data: any): string[] {
   const passed: string[] = [];
-  const { technical, international, content, links, images, schema, social, accessibility, dom, performance, security, trustSignals } = data;
+  const { technical, international, content, links, images, schema, social, accessibility, dom, performance, security, trustSignals, mobile } = data;
 
   if (technical.title.isOptimal) passed.push('სათაური ოპტიმალურია ✓');
   if (technical.metaDesc.isOptimal) passed.push('მეტა აღწერა ოპტიმალურია ✓');
@@ -1025,6 +1357,16 @@ function collectPassed(data: any): string[] {
   if (trustSignals.hasPrivacyPage) passed.push('Privacy page ✓');
   if (trustSignals.hasAuthor) passed.push('Author ✓');
   if (trustSignals.socialLinksCount > 0) passed.push(`Social (${trustSignals.socialPlatforms.join(', ')}) ✓`);
+
+  // Mobile
+  if (mobile && mobile.score >= 80) passed.push(`მობილური მეგობრულობა (${mobile.score}/100) ✓`);
+  if (mobile && mobile.hasViewport && mobile.hasWidthDeviceWidth) passed.push('Viewport კონფიგურაცია ✓');
+  if (mobile && mobile.hasMediaQueries) passed.push(`Media queries (${mobile.mediaQueryCount}) ✓`);
+  if (mobile && (mobile.hasFlexbox || mobile.hasGrid)) passed.push('რესპონსიული layout (flexbox/grid) ✓');
+  if (mobile && mobile.hasManifest) passed.push('Web App Manifest ✓');
+  if (mobile && mobile.responsiveImagesCount > 0) passed.push(`რესპონსიული სურათები (${mobile.responsiveImagesCount}) ✓`);
+  if (mobile && mobile.smallTapTargets === 0) passed.push('Tap targets ოპტიმალურია ✓');
+  if (mobile && !mobile.hasUserScalable) passed.push('მასშტაბირება ნებადართულია ✓');
 
   return passed;
 }

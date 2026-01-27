@@ -464,6 +464,84 @@ export interface TrustSignalsData {
 }
 
 /* ============================================================================
+ * MOBILE FRIENDLINESS
+ * ========================================================================== */
+
+export interface MobileData {
+  // Viewport
+  hasViewport: boolean;
+  viewportContent: string | null;
+  hasWidthDeviceWidth: boolean;
+  hasInitialScale: boolean;
+  hasUserScalable: boolean; // user-scalable=no is bad for accessibility
+
+  // Touch & Tap Targets
+  smallTapTargets: number; // Elements < 48px that are clickable
+  tapTargetsList: { element: string; size: string }[];
+
+  // Text Readability
+  smallTextElements: number; // Text < 12px
+  usesRelativeFontSizes: boolean; // em, rem, % vs px
+
+  // Responsive Design
+  hasMediaQueries: boolean;
+  mediaQueryCount: number;
+  hasFlexbox: boolean;
+  hasGrid: boolean;
+
+  // Content Width
+  horizontalScrollRisk: boolean; // Fixed widths > 100vw
+  fixedWidthElements: number;
+
+  // Mobile-specific Meta
+  hasThemeColor: boolean;
+  hasAppleMobileWebAppCapable: boolean;
+  hasAppleTouchIcon: boolean;
+  hasManifest: boolean;
+
+  // Responsive Images
+  responsiveImagesCount: number; // srcset or picture
+  totalImages: number;
+
+  // Mobile Score
+  score: number;
+  issues: string[];
+}
+
+/* ============================================================================
+ * EXTERNAL RESOURCES
+ * ========================================================================== */
+
+export interface ExternalResource {
+  url: string;
+  type: 'css' | 'js' | 'font' | 'image' | 'other';
+  domain: string;
+  isThirdParty: boolean;
+}
+
+export interface ExternalResourcesData {
+  // Stylesheets
+  cssFiles: { url: string; isThirdParty: boolean }[];
+  cssCount: number;
+
+  // JavaScript
+  jsFiles: { url: string; isThirdParty: boolean; async: boolean; defer: boolean; module: boolean }[];
+  jsCount: number;
+
+  // Fonts
+  fontFiles: { url: string; format: string | null }[];
+  fontCount: number;
+  googleFonts: string[]; // Font family names from Google Fonts
+
+  // Third-party domains
+  thirdPartyDomains: string[];
+  thirdPartyCount: number;
+
+  // Preconnect/DNS-Prefetch suggestions
+  suggestedPreconnects: string[];
+}
+
+/* ============================================================================
  * AUDIT RESULT
  * ========================================================================== */
 
@@ -498,6 +576,8 @@ export interface AuditResult {
   security: SecurityData;
   platform: PlatformData;
   trustSignals: TrustSignalsData;
+  mobile: MobileData;
+  externalResources: ExternalResourcesData;
 
   issues: AuditIssue[];
   passed: string[];
