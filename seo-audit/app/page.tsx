@@ -219,7 +219,7 @@ export default function SEOChecker() {
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <h1 className="text-3xl font-bold">SEO აუდიტი</h1>
-          <p className="text-emerald-100 mt-1">ვებგვერდის SEO ანალიზი • {results ? `${results.summary.totalChecks} შემოწმება შესრულდა` : '75+ შემოწმება'}</p>
+          <p className="text-emerald-100 mt-1">ვებგვერდის SEO ანალიზი • {results ? `${results.summary.totalChecks} შემოწმება შესრულდა` : 'სრული SEO ანალიზი'}</p>
         </div>
       </div>
 
@@ -894,7 +894,7 @@ export default function SEOChecker() {
 
       {/* Footer */}
       <div className="text-center py-8 text-gray-400 text-sm">
-        SEO აუდიტი • 75+ შემოწმება • {new Date().getFullYear()}
+        SEO აუდიტი • სრული SEO ანალიზი • {new Date().getFullYear()}
       </div>
     </div>
   );
