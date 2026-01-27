@@ -327,10 +327,11 @@ export interface AccessibilityData {
 
   colorContrastIssues: number;
   contrastDetails: {
-    lowContrastElements: { element: string; text: string; colors: string; ratio: string }[];
+    lowContrastElements: { element: string; text: string; colors: string; ratio: string; section?: string }[];
     passedWCAG_AA: boolean;
     passedWCAG_AAA: boolean;
     score: number; // 0-100
+    sectionIssues?: { section: string; count: number }[];
   };
   tablesWithoutHeaders: number;
   autoplayMedia: number;

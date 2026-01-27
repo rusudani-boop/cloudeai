@@ -36,7 +36,7 @@ interface AuditResult {
   images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; imageSizeAnalysis?: { checked: number; largeCount: number; oldFormatCount: number; largeList: { src: string; size: string; type: string | null }[]; oldFormatList: { src: string; type: string | null }[]; }; };
   schema: { count: number; types: string[]; valid: number; invalid: number; details: SchemaItem[]; missingContext: number; hasWebSiteSearch: boolean; hasBreadcrumb: boolean; hasOrganization: boolean; hasFAQ: boolean; hasHowTo: boolean; };
   social: { og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null; siteName: string | null; locale: string | null }; twitter: { card: string | null; site: string | null; creator: string | null; title: string | null; description: string | null; image: string | null }; isComplete: boolean; hasArticleTags: boolean; };
-  accessibility: { buttonsWithoutLabel: number; inputsWithoutLabel: number; linksWithoutText: number; iframesWithoutTitle: number; skippedHeadings: string[]; hasSkipLink: boolean; hasLangAttribute: boolean; clickableImagesWithoutAlt: number; positiveTabindex: number; hasMainLandmark: boolean; hasNavLandmark: boolean; hasFocusVisible: boolean; colorContrastIssues: number; aria: AriaData; tablesWithoutHeaders: number; autoplayMedia: number; };
+  accessibility: { buttonsWithoutLabel: number; inputsWithoutLabel: number; linksWithoutText: number; iframesWithoutTitle: number; skippedHeadings: string[]; hasSkipLink: boolean; hasLangAttribute: boolean; clickableImagesWithoutAlt: number; positiveTabindex: number; hasMainLandmark: boolean; hasNavLandmark: boolean; hasFocusVisible: boolean; colorContrastIssues: number; contrastDetails?: { lowContrastElements: { element: string; text: string; colors: string; ratio: string; section?: string }[]; passedWCAG_AA: boolean; passedWCAG_AAA: boolean; score: number; sectionIssues?: { section: string; count: number }[] }; aria: AriaData; tablesWithoutHeaders: number; autoplayMedia: number; };
   dom: DOMData;
   performance: { totalScripts: number; totalStylesheets: number; renderBlockingScripts: number; renderBlockingStyles: number; asyncScripts: number; deferScripts: number; moduleScripts: number; inlineScripts: number; inlineStyles: number; preloads: number; preloadsWithoutAs: number; preconnects: number; prefetches: number; dnsPrefetches: number; fontsWithoutDisplay: number; webFonts: number; criticalCssInlined: boolean; hasServiceWorker: boolean; htmlSize: number; estimatedWeight: string; };
   security: { isHttps: boolean; mixedContentCount: number; mixedContentUrls: string[]; protocolRelativeCount: number; unsafeExternalLinks: number; hasCSP: boolean; hasXFrameOptions: boolean; hasXContentTypeOptions: boolean; hasReferrerPolicy: boolean; hasCORS: boolean; formWithoutAction: number; passwordFieldWithoutAutocomplete: number; ssl?: { valid: boolean; issuer?: string; validFrom?: string; validTo?: string; daysUntilExpiry?: number; error?: string }; securityHeaders?: { headers: Record<string, string | null>; score: number; issues: string[] }; };
@@ -151,7 +151,7 @@ export default function SEOChecker() {
   const [isDragging, setIsDragging] = useState(false);
 
   // All sections to open by default
-  const allSections = ['overview', 'issues', 'passed', 'technical', 'content', 'security', 'international', 'links', 'images', 'schema', 'social', 'platform', 'accessibility', 'dom', 'performance', 'ai', 'trust'];
+  const allSections = ['overview', 'issues', 'passed', 'technical', 'content', 'security', 'international', 'links', 'images', 'schema', 'social', 'platform', 'accessibility', 'dom', 'performance', 'ai', 'trust', 'mobile', 'external-resources'];
 
   const handleAnalyze = async () => {
     setError('');
@@ -756,10 +756,24 @@ export default function SEOChecker() {
               {results.accessibility.contrastDetails && results.accessibility.contrastDetails.lowContrastElements.length > 0 && (
                 <div className="mt-4 p-4 bg-orange-50 rounded-lg">
                   <div className="font-medium text-orange-800 mb-2">კონტრასტის პრობლემები (WCAG AA: 4.5:1):</div>
+                  {/* Section Summary */}
+                  {results.accessibility.contrastDetails.sectionIssues && results.accessibility.contrastDetails.sectionIssues.length > 0 && (
+                    <div className="mb-3 p-3 bg-orange-100 rounded">
+                      <div className="text-sm font-medium text-orange-800 mb-2">სექციები დაბალი კონტრასტით:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {results.accessibility.contrastDetails.sectionIssues.map((sec, i) => (
+                          <span key={i} className="px-2 py-1 bg-orange-200 text-orange-800 rounded text-sm">
+                            {sec.section}: {sec.count} პრობლემა
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     {results.accessibility.contrastDetails.lowContrastElements.map((item, i) => (
-                      <div key={i} className="text-sm text-orange-700 flex gap-2">
+                      <div key={i} className="text-sm text-orange-700 flex gap-2 items-center">
                         <span className="text-orange-500">•</span>
+                        {item.section && <span className="text-xs bg-orange-200 px-1.5 py-0.5 rounded">{item.section}</span>}
                         <span className="font-mono bg-orange-100 px-1 rounded">&lt;{item.element}&gt;</span>
                         <span className="truncate max-w-xs">{item.text}</span>
                         <span className="text-orange-600">({item.ratio})</span>
