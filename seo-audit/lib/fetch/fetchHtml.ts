@@ -87,6 +87,10 @@ export async function checkSitemap(
         res.body?.includes('<?xml') ||
         res.body?.includes('<sitemapindex'))
     );
+    const found =
+      res.status === 200 &&
+      (res.body?.includes('<urlset') ||
+        res.body?.includes('<?xml'));
 
     return { found, url: found ? url : null };
   } catch {

@@ -8,12 +8,6 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
 export type FetchMethod = 'url' | 'html';
 
-export interface FetchResult {
-  html: string;
-  status: number;
-  finalUrl: string;
-}
-
 export type RenderMethod = 'ssr' | 'csr' | 'static' | 'unknown';
 
 /* ============================================================================
