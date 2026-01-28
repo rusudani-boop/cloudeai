@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import tls from 'tls';
 import type { FetchResult } from '../audit/types';
 import { requestUrl } from './request';
 
@@ -87,10 +88,6 @@ export async function checkSitemap(
         res.body?.includes('<?xml') ||
         res.body?.includes('<sitemapindex'))
     );
-    const found =
-      res.status === 200 &&
-      (res.body?.includes('<urlset') ||
-        res.body?.includes('<?xml'));
 
     return { found, url: found ? url : null };
   } catch {
@@ -138,8 +135,16 @@ export async function checkLlmsTxt(
 ): Promise<boolean> {
   try {
     const url = new URL('/llms.txt', baseUrl).href;
-    const res = await requestUrl({ url, timeout: 5000 });
-    return res.status === 200 && !!res.body && res.body.length > 10;
+    const res = await requestUrl({ url, timeout: 8000, readBody: true });
+    // Check for 200 status and text content (not HTML error page)
+    if (res.status === 200 && res.body && res.body.length > 5) {
+      // Make sure it's not an HTML error page
+      const bodyLower = res.body.toLowerCase();
+      if (!bodyLower.includes('<!doctype') && !bodyLower.includes('<html')) {
+        return true;
+      }
+    }
+    return false;
   } catch {
     return false;
   }
@@ -229,14 +234,28 @@ export async function checkExternalLinks(
     const batchResults = await Promise.all(
       batch.map(async (link) => {
         try {
-          const res = await requestUrl({
+          // First try HEAD request
+          let res = await requestUrl({
             url: link.href,
             method: 'HEAD',
             timeout: 8000,
             readBody: false,
+            followRedirects: true,
           });
 
-          if (res.status >= 400) {
+          // If HEAD returns 405 (Method Not Allowed), 403, or fails, try GET
+          if (res.status === 405 || res.status === 403 || res.status === 400) {
+            res = await requestUrl({
+              url: link.href,
+              method: 'GET',
+              timeout: 10000,
+              readBody: false,
+              followRedirects: true,
+            });
+          }
+
+          // Only report actual 404, 410, 500+ errors
+          if (res.status === 404 || res.status === 410 || res.status >= 500) {
             return {
               href: link.href,
               text: link.text,
@@ -245,12 +264,17 @@ export async function checkExternalLinks(
           }
           return null;
         } catch (e) {
-          return {
-            href: link.href,
-            text: link.text,
-            status: 0,
-            error: e instanceof Error ? e.message : 'Connection error',
-          };
+          // Only report connection errors, not timeouts (which may just be slow sites)
+          const errorMsg = e instanceof Error ? e.message : 'Connection error';
+          if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('ECONNREFUSED')) {
+            return {
+              href: link.href,
+              text: link.text,
+              status: 0,
+              error: errorMsg,
+            };
+          }
+          return null; // Ignore timeouts and other errors
         }
       })
     );
@@ -272,42 +296,46 @@ export async function checkSecurityHeaders(
   score: number;
   issues: string[];
 }> {
-  const securityHeaders = [
-    'content-security-policy',
-    'x-frame-options',
-    'x-content-type-options',
-    'strict-transport-security',
-    'referrer-policy',
-    'permissions-policy',
-    'x-xss-protection',
-  ];
+  // Security headers to check (lowercase for comparison)
+  const securityHeadersMap: Record<string, string> = {
+    'content-security-policy': 'Content-Security-Policy',
+    'x-frame-options': 'X-Frame-Options',
+    'x-content-type-options': 'X-Content-Type-Options',
+    'strict-transport-security': 'Strict-Transport-Security',
+    'referrer-policy': 'Referrer-Policy',
+    'permissions-policy': 'Permissions-Policy',
+    'x-xss-protection': 'X-XSS-Protection',
+  };
 
   try {
+    // Use GET request - some servers don't return all headers on HEAD
     const res = await requestUrl({
       url,
-      method: 'HEAD',
-      timeout: 5000,
+      method: 'GET',
+      timeout: 10000,
       readBody: false,
+      followRedirects: true,
     });
 
     const foundHeaders: Record<string, string | null> = {};
     const issues: string[] = [];
     let score = 100;
 
-    for (const header of securityHeaders) {
-      const rawValue = res.headers[header];
-      const value = Array.isArray(rawValue) ? rawValue[0] : rawValue || null;
-      foundHeaders[header] = value;
+    // Node.js lowercases all header names in IncomingHttpHeaders
+    for (const [headerLower, headerDisplay] of Object.entries(securityHeadersMap)) {
+      const rawValue = res.headers[headerLower];
+      const value = Array.isArray(rawValue) ? rawValue[0] : (rawValue as string) || null;
+      foundHeaders[headerDisplay] = value;
 
       if (!value) {
-        issues.push(`Missing ${header}`);
+        issues.push(`Missing ${headerDisplay}`);
         score -= 14;
       }
     }
 
     return { headers: foundHeaders, score: Math.max(0, score), issues };
-  } catch {
-    return { headers: {}, score: 0, issues: ['Could not check security headers'] };
+  } catch (e) {
+    return { headers: {}, score: 0, issues: [`Could not check security headers: ${e instanceof Error ? e.message : 'Error'}`] };
   }
 }
 
@@ -396,47 +424,73 @@ export async function checkSSLCertificate(
   error?: string;
 }> {
   try {
-    const res = await requestUrl({
-      url,
-      method: 'HEAD',
-      timeout: 5000,
-      readBody: false,
+    const parsed = new URL(url);
+
+    // Only check HTTPS URLs
+    if (parsed.protocol !== 'https:') {
+      return { valid: false, error: 'Not HTTPS' };
+    }
+
+    return new Promise((resolve) => {
+      const socket = tls.connect(
+        {
+          host: parsed.hostname,
+          port: parseInt(parsed.port) || 443,
+          servername: parsed.hostname,
+          rejectUnauthorized: false, // We want to check even invalid certs
+        },
+        () => {
+          try {
+            const cert = socket.getPeerCertificate();
+            const authorized = socket.authorized;
+
+            socket.destroy();
+
+            if (!cert || !cert.valid_to) {
+              resolve({ valid: false, error: 'No certificate found' });
+              return;
+            }
+
+            const validFrom = new Date(cert.valid_from);
+            const validTo = new Date(cert.valid_to);
+            const now = new Date();
+
+            const daysUntilExpiry = Math.floor(
+              (validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            const isValid = authorized && now >= validFrom && now <= validTo;
+
+            resolve({
+              valid: isValid,
+              issuer: cert.issuer?.O || cert.issuer?.CN || 'Unknown',
+              validFrom: validFrom.toISOString().split('T')[0],
+              validTo: validTo.toISOString().split('T')[0],
+              daysUntilExpiry,
+              error: !isValid && !authorized ? String(socket.authorizationError || 'Certificate not authorized') : undefined,
+            });
+          } catch (e) {
+            socket.destroy();
+            resolve({ valid: false, error: e instanceof Error ? e.message : 'Certificate error' });
+          }
+        }
+      );
+
+      socket.setTimeout(8000, () => {
+        socket.destroy();
+        resolve({ valid: false, error: 'Connection timeout' });
+      });
+
+      socket.on('error', (err) => {
+        socket.destroy();
+        // Connection succeeded but cert may still be valid
+        if (err.message.includes('certificate')) {
+          resolve({ valid: false, error: err.message });
+        } else {
+          resolve({ valid: false, error: `Connection error: ${err.message}` });
+        }
+      });
     });
-
-    const socket = res.socket;
-    if (!socket?.getPeerCertificate) {
-      return { valid: false, error: 'No certificate' };
-    }
-
-    const cert = socket.getPeerCertificate();
-    if (!cert?.valid_to) {
-      return { valid: false, error: 'Invalid certificate' };
-    }
-
-    const validFrom = new Date(cert.valid_from);
-    const validTo = new Date(cert.valid_to);
-    const now = new Date();
-
-    const daysUntilExpiry = Math.floor(
-      (validTo.getTime() - now.getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-
-    return {
-      valid:
-        socket.authorized === true &&
-        now >= validFrom &&
-        now <= validTo,
-      issuer:
-        cert.issuer?.O ||
-        cert.issuer?.CN ||
-        'Unknown',
-      validFrom: validFrom
-        .toISOString()
-        .split('T')[0],
-      validTo: validTo.toISOString().split('T')[0],
-      daysUntilExpiry,
-    };
   } catch (e) {
     return {
       valid: false,

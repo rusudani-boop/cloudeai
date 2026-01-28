@@ -33,7 +33,7 @@ interface AuditResult {
   international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; duplicateHreflangs?: string[]; nonCanonicalHreflangs?: string[]; };
   content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; detectedLanguage?: string; };
   links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; redirectLinks?: number; redirectList?: { href: string; text: string; status: number; location: string }[]; brokenExternalLinks?: number; brokenExternalList?: { href: string; text: string; status: number; error?: string }[]; };
-  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; imageSizeAnalysis?: { checked: number; largeCount: number; oldFormatCount: number; largeList: { src: string; size: string; type: string | null }[]; oldFormatList: { src: string; type: string | null }[]; }; };
+  images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; withoutAltList?: { src: string; context: string }[]; withoutDimensionsList?: { src: string; alt: string }[]; emptyAltList?: { src: string; context: string }[]; imageSizeAnalysis?: { checked: number; largeCount: number; oldFormatCount: number; largeList: { src: string; size: string; type: string | null }[]; oldFormatList: { src: string; type: string | null }[]; }; };
   schema: { count: number; types: string[]; valid: number; invalid: number; details: SchemaItem[]; missingContext: number; hasWebSiteSearch: boolean; hasBreadcrumb: boolean; hasOrganization: boolean; hasFAQ: boolean; hasHowTo: boolean; };
   social: { og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null; siteName: string | null; locale: string | null }; twitter: { card: string | null; site: string | null; creator: string | null; title: string | null; description: string | null; image: string | null }; isComplete: boolean; hasArticleTags: boolean; };
   accessibility: { buttonsWithoutLabel: number; inputsWithoutLabel: number; linksWithoutText: number; iframesWithoutTitle: number; skippedHeadings: string[]; hasSkipLink: boolean; hasLangAttribute: boolean; clickableImagesWithoutAlt: number; positiveTabindex: number; hasMainLandmark: boolean; hasNavLandmark: boolean; hasFocusVisible: boolean; colorContrastIssues: number; contrastDetails?: { lowContrastElements: { element: string; text: string; colors: string; ratio: string; section?: string }[]; passedWCAG_AA: boolean; passedWCAG_AAA: boolean; score: number; sectionIssues?: { section: string; count: number }[] }; aria: AriaData; tablesWithoutHeaders: number; autoplayMedia: number; };
@@ -397,13 +397,14 @@ export default function SEOChecker() {
                           <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
                             <div className="font-medium">გადამისამართებული ბმულები:</div>
                             {results.links.redirectList.map((link: {href: string; text: string; status: number; location: string}, j: number) => (
-                              <div key={j} className="flex flex-col gap-1">
+                              <div key={j} className="flex flex-col gap-0.5 p-1 bg-white/20 rounded">
                                 <div className="flex gap-2 items-center">
                                   <span className="text-yellow-600">•</span>
-                                  <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
-                                  <span className="text-orange-600 font-medium">{link.status}</span>
+                                  <span className="text-orange-600 font-medium">HTTP {link.status}</span>
                                 </div>
-                                <div className="ml-4 opacity-60 truncate">→ {link.location}</div>
+                                {link.text && <div className="pl-4 text-gray-700">ტექსტი: &quot;{link.text.substring(0, 50)}{link.text.length > 50 ? '...' : ''}&quot;</div>}
+                                <div className="pl-4"><code className="bg-white/50 px-1 rounded break-all">{link.href}</code></div>
+                                <div className="pl-4 text-green-700">→ {link.location}</div>
                               </div>
                             ))}
                           </div>
@@ -414,10 +415,13 @@ export default function SEOChecker() {
                           <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
                             <div className="font-medium">გატეხილი გარე ბმულები:</div>
                             {results.links.brokenExternalList.map((link: {href: string; text: string; status: number; error?: string}, j: number) => (
-                              <div key={j} className="flex gap-2 items-center">
-                                <span className="text-red-600">•</span>
-                                <code className="bg-white/50 px-1 rounded truncate max-w-xs">{link.href}</code>
-                                <span className="text-red-600 font-medium">{link.status || link.error}</span>
+                              <div key={j} className="flex flex-col gap-0.5 p-1 bg-white/20 rounded">
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-red-600">•</span>
+                                  <span className="text-red-600 font-medium">{link.status ? `HTTP ${link.status}` : link.error}</span>
+                                </div>
+                                {link.text && <div className="pl-4 text-gray-700">ტექსტი: &quot;{link.text.substring(0, 50)}{link.text.length > 50 ? '...' : ''}&quot;</div>}
+                                <div className="pl-4"><code className="bg-white/50 px-1 rounded break-all">{link.href}</code></div>
                               </div>
                             ))}
                           </div>
@@ -432,6 +436,38 @@ export default function SEOChecker() {
                                 <span className="text-yellow-600">•</span>
                                 <code className="bg-white/50 px-1 rounded truncate max-w-xs">{img.src.split('/').pop()}</code>
                                 <span className="font-medium">{img.size}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show images without alt */}
+                        {issue.id === 'img-no-alt' && results.images.withoutAltList && results.images.withoutAltList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">სურათები alt ტექსტის გარეშე:</div>
+                            {results.images.withoutAltList.map((img: {src: string; context: string}, j: number) => (
+                              <div key={j} className="flex flex-col gap-0.5 p-1 bg-white/20 rounded">
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-red-600">•</span>
+                                  <code className="bg-white/50 px-1 rounded break-all text-xs">{img.src}</code>
+                                </div>
+                                {img.context && <div className="pl-4 text-gray-600 text-xs">{img.context}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show images without dimensions */}
+                        {issue.id === 'img-no-dim' && results.images.withoutDimensionsList && results.images.withoutDimensionsList.length > 0 && (
+                          <div className="mt-2 p-2 bg-white/30 rounded text-xs space-y-1">
+                            <div className="font-medium">სურათები ზომების (width/height) გარეშე:</div>
+                            {results.images.withoutDimensionsList.map((img: {src: string; alt: string}, j: number) => (
+                              <div key={j} className="flex flex-col gap-0.5 p-1 bg-white/20 rounded">
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-yellow-600">•</span>
+                                  <code className="bg-white/50 px-1 rounded break-all text-xs">{img.src}</code>
+                                </div>
+                                <div className="pl-4 text-gray-600 text-xs">alt: &quot;{img.alt}&quot;</div>
                               </div>
                             ))}
                           </div>

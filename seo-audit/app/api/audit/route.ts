@@ -117,15 +117,14 @@ export async function POST(request: NextRequest) {
 
         // Check external links for 404 errors (limit to 15 for performance)
         if (result.links.externalUrls && result.links.externalUrls.length > 0) {
-          const externalUrls = result.links.externalUrls.map((l: { href: string }) => l.href);
-          const brokenExternalLinks = await checkExternalLinks(externalUrls, 15);
+          const externalLinks = result.links.externalUrls.slice(0, 15);
+          const brokenExternalLinks = await checkExternalLinks(externalLinks, 3);
 
           if (brokenExternalLinks.length > 0) {
             result.links.brokenExternalLinks = brokenExternalLinks.length;
-            result.links.brokenExternalList = brokenExternalLinks.map((r) => {
-              const linkInfo = result.links.externalUrls.find((l: { href: string }) => l.href === r.href);
-              return { href: r.href, text: linkInfo?.text || '', status: r.status, error: r.error };
-            });
+            result.links.brokenExternalList = brokenExternalLinks.map((r: { href: string; text: string; status: number; error?: string }) => ({
+              href: r.href, text: r.text, status: r.status, error: r.error
+            }));
 
             result.issues.push({
               id: 'broken-external-links',
@@ -202,14 +201,11 @@ export async function POST(request: NextRequest) {
 
         // Check if current page is in sitemap (handles sitemap_index.xml with multiple sitemaps)
         if (sitemap.found && sitemap.url) {
-          const sitemapCheck = await checkUrlInSitemap(sitemap.url, finalUrl);
-          result.technical.sitemap.urlCount = sitemapCheck.urlCount;
-          result.technical.sitemap.pageInSitemap = sitemapCheck.found;
-          if (sitemapCheck.sitemapCount) {
-            result.technical.sitemap.sitemapCount = sitemapCheck.sitemapCount;
-          }
+          const base = `${new URL(finalUrl).protocol}//${new URL(finalUrl).host}`;
+          const sitemapCheck = await checkUrlInSitemap(base, finalUrl);
+          result.technical.sitemap.pageInSitemap = sitemapCheck.inSitemap;
 
-          if (!sitemapCheck.found) {
+          if (!sitemapCheck.inSitemap && sitemapCheck.found) {
             result.issues.push({
               id: 'page-not-in-sitemap',
               severity: 'medium' as const,
@@ -219,59 +215,39 @@ export async function POST(request: NextRequest) {
               location: 'sitemap.xml',
               fix: 'Add page URL to sitemap.xml',
               fixGe: 'დაამატეთ გვერდის URL sitemap.xml-ში',
-              details: `საშუალო პრიორიტეტი. გვერდი არ არის ნაპოვნი sitemap.xml-ში (${sitemapCheck.urlCount} URL სულ). sitemap-ში არსებობა აუმჯობესებს ინდექსაციას.`
+              details: `საშუალო პრიორიტეტი. გვერდი არ არის ნაპოვნი sitemap.xml-ში. sitemap-ში არსებობა აუმჯობესებს ინდექსაციას.`
             });
           }
         }
 
         // Check image sizes (for large images)
         if (result.images.imageUrls && result.images.imageUrls.length > 0) {
-          const imageChecks = await Promise.all(
-            result.images.imageUrls.slice(0, 10).map(async (img: { src: string; alt: string }) => {
-              const sizeInfo = await checkImageSize(img.src);
-              return { ...img, ...sizeInfo };
-            })
-          );
+          const imagesToCheck = result.images.imageUrls.slice(0, 10);
+          const imageAnalysis = await checkImageSize(imagesToCheck, 3);
 
-          const largeImages = imageChecks.filter((img) => img.size && img.size > 200 * 1024); // > 200KB
-          const oldFormatImages = imageChecks.filter((img) => img.type && !img.type.includes('webp') && !img.type.includes('avif'));
+          result.images.imageSizeAnalysis = imageAnalysis;
 
-          result.images.imageSizeAnalysis = {
-            checked: imageChecks.length,
-            largeCount: largeImages.length,
-            oldFormatCount: oldFormatImages.length,
-            largeList: largeImages.map((img) => ({
-              src: img.src,
-              size: img.size ? `${Math.round(img.size / 1024)}KB` : 'unknown',
-              type: img.type
-            })),
-            oldFormatList: oldFormatImages.map((img) => ({
-              src: img.src,
-              type: img.type
-            }))
-          };
-
-          if (largeImages.length > 0) {
+          if (imageAnalysis.largeCount > 0) {
             result.issues.push({
               id: 'large-images',
               severity: 'medium' as const,
               category: 'სურათები',
-              issue: `${largeImages.length} image(s) larger than 200KB`,
-              issueGe: `${largeImages.length} სურათი 200KB-ზე მეტია`,
+              issue: `${imageAnalysis.largeCount} image(s) larger than 500KB`,
+              issueGe: `${imageAnalysis.largeCount} სურათი 500KB-ზე მეტია`,
               location: '<img src>',
               fix: 'Compress images or use responsive sizes',
               fixGe: 'შეკუმშეთ სურათები ან გამოიყენეთ რესპონსიული ზომები',
-              details: `საშუალო პრიორიტეტი. დიდი სურათები ანელებს გვერდის ჩატვირთვას. მაგ: ${largeImages.slice(0, 2).map(img => `${img.src.split('/').pop()} (${Math.round((img.size || 0) / 1024)}KB)`).join(', ')}`
+              details: `საშუალო პრიორიტეტი. დიდი სურათები ანელებს გვერდის ჩატვირთვას. მაგ: ${imageAnalysis.largeList.slice(0, 2).map(img => `${img.src.split('/').pop()} (${img.size})`).join(', ')}`
             });
           }
 
-          if (oldFormatImages.length > 0) {
+          if (imageAnalysis.oldFormatCount > 0) {
             result.issues.push({
               id: 'old-image-formats',
               severity: 'low' as const,
               category: 'სურათები',
-              issue: `${oldFormatImages.length} image(s) using old formats (not WebP/AVIF)`,
-              issueGe: `${oldFormatImages.length} სურათი იყენებს ძველ ფორმატებს (არა WebP/AVIF)`,
+              issue: `${imageAnalysis.oldFormatCount} image(s) using old formats (not WebP/AVIF)`,
+              issueGe: `${imageAnalysis.oldFormatCount} სურათი იყენებს ძველ ფორმატებს (არა WebP/AVIF)`,
               location: '<img src>',
               fix: 'Convert images to WebP or AVIF format',
               fixGe: 'გადაიყვანეთ სურათები WebP ან AVIF ფორმატში',
