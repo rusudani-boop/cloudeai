@@ -143,8 +143,8 @@ export interface ContentData {
   readability: ReadabilityData;
   keywordDensity: KeywordDensityItem[];
 
-  detectedLanguage: 'ka' | 'ru' | 'de' | 'en';
-  titleLanguage: 'ka' | 'ru' | 'de' | 'en' | null;
+  detectedLanguage: 'ka' | 'ru' | 'de' | 'en' | 'es';
+  titleLanguage: 'ka' | 'ru' | 'de' | 'en' | 'es' | null;
   titleContentLangMismatch: boolean | null;
 }
 
@@ -223,6 +223,11 @@ export interface ImageData {
   brokenList?: ImageItem[];
 
   imageUrls?: ImageItem[];
+
+  // Lists for displaying issues
+  withoutAltList?: { src: string; context: string }[];
+  withoutDimensionsList?: { src: string; alt: string }[];
+  emptyAltList?: { src: string; context: string }[];
 
   imageSizeAnalysis?: {
     checked: number;

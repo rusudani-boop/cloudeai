@@ -74,8 +74,9 @@ export async function runAudit(
 // ============================================
 
 // Detect primary language of text
-function detectLanguage(text: string): 'ka' | 'ru' | 'de' | 'en' {
+function detectLanguage(text: string): 'ka' | 'ru' | 'de' | 'en' | 'es' {
   const sample = text.substring(0, 2000);
+  const sampleLower = sample.toLowerCase();
 
   // Count Georgian characters (უნიკოდი: U+10A0 - U+10FF)
   const georgianChars = (sample.match(/[\u10A0-\u10FF]/g) || []).length;
@@ -85,7 +86,11 @@ function detectLanguage(text: string): 'ka' | 'ru' | 'de' | 'en' {
 
   // Count German-specific characters and common German words
   const germanUmlauts = (sample.match(/[äöüÄÖÜß]/g) || []).length;
-  const germanWords = (sample.toLowerCase().match(/\b(und|der|die|das|ist|sind|haben|werden|nicht|auch|für|mit|auf|dem|des|ein|eine|zu|von|bei|nach|über|vor|durch|unter|gegen|ohne|seit|während|wegen)\b/g) || []).length;
+  const germanWords = (sampleLower.match(/\b(und|der|die|das|ist|sind|haben|werden|nicht|auch|für|mit|auf|dem|des|ein|eine|zu|von|bei|nach|über|vor|durch|unter|gegen|ohne|seit|während|wegen)\b/g) || []).length;
+
+  // Count Spanish-specific characters and common Spanish words
+  const spanishChars = (sample.match(/[ñÑ¿¡áéíóúÁÉÍÓÚü]/g) || []).length;
+  const spanishWords = (sampleLower.match(/\b(el|la|los|las|de|que|en|es|por|con|para|como|más|pero|sus|le|ya|del|al|un|una|este|esta|son|se|no|hay|fue|todo|esta|ser|sobre|también|cuando|muy|sin|hasta|desde|donde|quien|entre|después|antes|durante|hacia|contra|según)\b/g) || []).length;
 
   // Count Latin characters
   const latinChars = (sample.match(/[a-zA-Z]/g) || []).length;
@@ -102,11 +107,14 @@ function detectLanguage(text: string): 'ka' | 'ru' | 'de' | 'en' {
   // German detection: umlauts OR common German words
   if (germanUmlauts > 3 || germanWords > 5) return 'de';
 
+  // Spanish detection: Spanish chars OR common Spanish words
+  if (spanishChars > 3 || spanishWords > 8) return 'es';
+
   return 'en';
 }
 
 // Count syllables based on detected language
-function countSyllables(word: string, lang: 'ka' | 'ru' | 'de' | 'en'): number {
+function countSyllables(word: string, lang: 'ka' | 'ru' | 'de' | 'en' | 'es'): number {
   word = word.toLowerCase();
 
   if (lang === 'ka') {
@@ -138,6 +146,19 @@ function countSyllables(word: string, lang: 'ka' | 'ru' | 'de' | 'en'): number {
       .replace(/tion|sion/g, 'XX')  // These are 2 syllables
       .replace(/ei|ie|eu|äu|au|oi|ey|ay|ee|oo/g, 'V');  // Single syllable diphthongs
     const vowels = processed.match(/[aeiouäöüVX]/g);
+    return vowels ? Math.max(1, vowels.length) : 1;
+  }
+
+  if (lang === 'es') {
+    // Spanish vowels: a, e, i, o, u (with accents: á, é, í, ó, ú)
+    const cleanWord = word.replace(/[^a-záéíóúüñ]/g, '');
+    if (!cleanWord) return 1;
+    // Spanish diphthongs count as 1 syllable: ai, au, ei, eu, oi, ou, ia, ie, io, iu, ua, ue, ui, uo
+    // Hiatus (two separate syllables): combinations with accented vowels
+    let processed = cleanWord
+      .replace(/[áéíóú]/g, 'V') // Accented vowels often form hiatus
+      .replace(/ai|au|ei|eu|oi|ou|ia|ie|io|iu|ua|ue|ui|uo/g, 'D'); // Diphthongs = 1 syllable
+    const vowels = processed.match(/[aeiouVD]/g);
     return vowels ? Math.max(1, vowels.length) : 1;
   }
 
@@ -174,9 +195,9 @@ function calculateReadability(text: string): ReadabilityData {
   const sentences = cleanText.split(/[.!?։।;]+/).filter((s) => s.trim().length > 10);
   const totalSentences = Math.max(sentences.length, 1);
 
-  // Get words - filter out very short tokens (supports Georgian, Cyrillic, Latin, German umlauts)
+  // Get words - filter out very short tokens (supports Georgian, Cyrillic, Latin, German, Spanish)
   const words = cleanText.split(/\s+/).filter((w) => {
-    const lettersOnly = w.replace(/[^\u10A0-\u10FF\u0400-\u04FFa-zA-ZäöüÄÖÜß]/g, '');
+    const lettersOnly = w.replace(/[^\u10A0-\u10FF\u0400-\u04FFa-zA-ZäöüÄÖÜßáéíóúÁÉÍÓÚñÑü]/g, '');
     return lettersOnly.length >= 2;
   });
   const totalWords = words.length;
@@ -184,7 +205,7 @@ function calculateReadability(text: string): ReadabilityData {
   if (totalWords < 10) {
     return {
       fleschScore: 0,
-      fleschGrade: 'არასაკმარისი კონტენტი',
+      fleschGrade: 'არასაკმარისი კონტენტი / Insufficient content',
       avgSentenceLength: 0,
       avgSyllablesPerWord: 0,
       complexWordPercentage: 0
@@ -219,11 +240,17 @@ function calculateReadability(text: string): ReadabilityData {
     // Russian adapted formula
     // Russian averages ~2.5 syllables per word
     fleschScore = 206.835 - (1.3 * avgSentenceLength) - (50 * avgSyllablesPerWord);
+  } else if (lang === 'es') {
+    // Spanish Fernández Huerta formula (adapted from Flesch)
+    // Spanish averages ~2.0 syllables per word
+    // Standard FH: 206.84 - (0.60 * P) - (1.02 * F)
+    // Where P = syllables per 100 words, F = words per sentence
+    // Simplified: 206.84 - (60 * ASW) - (1.02 * ASL)
+    fleschScore = 206.84 - (1.02 * avgSentenceLength) - (60 * avgSyllablesPerWord);
   } else {
     // English Flesch-Kincaid formula (standard)
     // Most web content averages ~1.5 syllables/word and ~15 words/sentence
     // Standard formula: 206.835 - (1.015 * ASL) - (84.6 * ASW)
-    // For typical web text (1.5 syl/word, 15 words/sent): 206.835 - 15.225 - 126.9 = 64.7 (Standard)
     fleschScore = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
   }
 
@@ -502,13 +529,14 @@ function analyzeContent(doc: Document, htmlLower: string, title: string, htmlLan
   const contentLanguage = detectLanguage(bodyText);
 
   // Map HTML lang attribute to our language codes
-  let declaredLanguage: 'ka' | 'ru' | 'de' | 'en' | null = null;
+  let declaredLanguage: 'ka' | 'ru' | 'de' | 'en' | 'es' | null = null;
   if (htmlLang) {
     const langCode = htmlLang.toLowerCase().split('-')[0];
     if (langCode === 'ka') declaredLanguage = 'ka';
     else if (langCode === 'ru' || langCode === 'uk' || langCode === 'be') declaredLanguage = 'ru'; // Ukrainian, Belarusian treated as Russian for readability
     else if (langCode === 'de') declaredLanguage = 'de';
     else if (langCode === 'en') declaredLanguage = 'en';
+    else if (langCode === 'es') declaredLanguage = 'es'; // Spanish
   }
 
   // Use declared language if available, otherwise use detected language
@@ -521,11 +549,11 @@ function analyzeContent(doc: Document, htmlLower: string, title: string, htmlLan
   // Check if title language matches content language
   const titleContentLangMismatch = titleLanguage && detectedLanguage && titleLanguage !== detectedLanguage;
 
-  // Keyword extraction - include Georgian, Cyrillic, German umlauts
+  // Keyword extraction - include Georgian, Cyrillic, German umlauts, Spanish
   const wordFreq: Record<string, number> = {};
   words.forEach((w) => {
-    // Keep Georgian (U+10A0-U+10FF), Cyrillic (U+0400-U+04FF), Latin + German umlauts
-    const word = w.toLowerCase().replace(/[^\u10A0-\u10FF\u0400-\u04FFa-z0-9äöüß]/g, '');
+    // Keep Georgian (U+10A0-U+10FF), Cyrillic (U+0400-U+04FF), Latin + German umlauts + Spanish
+    const word = w.toLowerCase().replace(/[^\u10A0-\u10FF\u0400-\u04FFa-z0-9äöüßáéíóúñ]/g, '');
     if (word.length > 2 && !PATTERNS.STOP_WORDS.has(word)) wordFreq[word] = (wordFreq[word] || 0) + 1;
   });
   const keywordDensity = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count, percentage: Math.round((count / wordCount) * 10000) / 100 }));
@@ -617,9 +645,6 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
 
 function analyzeImages(doc: Document) {
   const images = Array.from(doc.querySelectorAll('img'));
-  const withoutAlt = images.filter((img) => !img.hasAttribute('alt')).length;
-  const withEmptyAlt = images.filter((img) => img.getAttribute('alt') === '').length;
-  const withoutDimensions = images.filter((img) => !img.hasAttribute('width') || !img.hasAttribute('height')).length;
   const lazyLoaded = images.filter((img) => img.getAttribute('loading') === 'lazy').length;
   const lazyAboveFold = images.slice(0, 3).filter((img) => img.getAttribute('loading') === 'lazy').length;
   const clickableWithoutAlt = images.filter((img) => { const p = img.parentElement; return (p?.tagName === 'A' || p?.tagName === 'BUTTON') && !img.getAttribute('alt'); }).length;
@@ -630,20 +655,58 @@ function analyzeImages(doc: Document) {
   const brokenImages: { src: string; alt: string }[] = [];
   // Collect image URLs for size checking
   const imageUrls: { src: string; alt: string }[] = [];
+  // Collect images without alt
+  const withoutAltList: { src: string; context: string }[] = [];
+  // Collect images without dimensions
+  const withoutDimensionsList: { src: string; alt: string }[] = [];
+  // Collect images with empty alt
+  const emptyAltList: { src: string; context: string }[] = [];
 
   images.forEach((img) => {
     const src = img.getAttribute('src') || '';
-    const alt = img.getAttribute('alt') || '(no alt)';
+    const alt = img.getAttribute('alt');
+    const hasAlt = img.hasAttribute('alt');
+    const hasWidth = img.hasAttribute('width');
+    const hasHeight = img.hasAttribute('height');
+
+    // Get context (parent tag or nearby text)
+    const parent = img.parentElement;
+    const context = parent?.tagName === 'A' ? `ბმულში: ${(parent.getAttribute('href') || '').substring(0, 30)}` :
+                    parent?.tagName === 'FIGURE' ? 'figure ელემენტში' :
+                    parent?.className ? `კლასი: ${parent.className.substring(0, 20)}` : '';
+
     // Check for empty, invalid, or placeholder sources
     if (!src || src === '#' || src === 'undefined' || src === 'null' ||
         src.startsWith('data:,') || src === 'about:blank' ||
         (src.startsWith('data:') && src.length < 50)) {
-      brokenImages.push({ src: src || '(empty)', alt: alt.substring(0, 30) });
+      brokenImages.push({ src: src || '(empty)', alt: (alt || '(no alt)').substring(0, 30) });
     } else if (src.startsWith('http') && imageUrls.length < 15) {
       // Collect external image URLs for size checking
-      imageUrls.push({ src, alt: alt.substring(0, 30) });
+      imageUrls.push({ src, alt: (alt || '(no alt)').substring(0, 30) });
+    }
+
+    // Track images without alt attribute
+    if (!hasAlt && withoutAltList.length < 10) {
+      const shortSrc = src.length > 60 ? '...' + src.substring(src.length - 50) : src;
+      withoutAltList.push({ src: shortSrc, context });
+    }
+
+    // Track images with empty alt (that aren't decorative)
+    if (hasAlt && alt === '' && emptyAltList.length < 10) {
+      const shortSrc = src.length > 60 ? '...' + src.substring(src.length - 50) : src;
+      emptyAltList.push({ src: shortSrc, context });
+    }
+
+    // Track images without dimensions
+    if ((!hasWidth || !hasHeight) && withoutDimensionsList.length < 10) {
+      const shortSrc = src.length > 60 ? '...' + src.substring(src.length - 50) : src;
+      withoutDimensionsList.push({ src: shortSrc, alt: (alt || '(no alt)').substring(0, 30) });
     }
   });
+
+  const withoutAlt = images.filter((img) => !img.hasAttribute('alt')).length;
+  const withEmptyAlt = images.filter((img) => img.getAttribute('alt') === '').length;
+  const withoutDimensions = images.filter((img) => !img.hasAttribute('width') || !img.hasAttribute('height')).length;
 
   return {
     total: images.length, withoutAlt, withEmptyAlt, withoutDimensions, lazyLoaded, lazyAboveFold,
@@ -651,7 +714,10 @@ function analyzeImages(doc: Document) {
     modernFormats, srcsetCount,
     brokenCount: brokenImages.length,
     brokenList: brokenImages.slice(0, 10),
-    imageUrls: imageUrls.slice(0, 15) // For size checking
+    imageUrls: imageUrls.slice(0, 15), // For size checking
+    withoutAltList,
+    withoutDimensionsList,
+    emptyAltList
   };
 }
 
