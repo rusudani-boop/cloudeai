@@ -87,19 +87,18 @@ export async function POST(request: NextRequest) {
           result.technical.robotsTxt = { found: true, content: robots, blocksAll: robots.includes('Disallow: /'), hasSitemap: robots.toLowerCase().includes('sitemap:') };
         }
         result.technical.sitemap = sitemap;
-        result.technical.llmsTxt = { found: llmsTxt.found, mentioned: result.technical.llmsTxt?.mentioned || false };
+        result.technical.llmsTxt = { found: llmsTxt, mentioned: result.technical.llmsTxt?.mentioned || false };
 
         // Check internal links for redirects (limit to 10 for performance)
         if (result.links.internalUrls && result.links.internalUrls.length > 0) {
-          const linksToCheck = result.links.internalUrls.map((l: { href: string }) => l.href);
-          const redirectResults = await checkLinksForRedirects(linksToCheck, 10);
+          const linksToCheck = result.links.internalUrls.slice(0, 10);
+          const redirectResults = await checkLinksForRedirects(linksToCheck, 5);
 
           if (redirectResults.length > 0) {
             result.links.redirectLinks = redirectResults.length;
-            result.links.redirectList = redirectResults.map((r) => {
-              const linkInfo = result.links.internalUrls.find((l: { href: string }) => l.href === r.href);
-              return { href: r.href, text: linkInfo?.text || '', status: r.status, location: r.location };
-            });
+            result.links.redirectList = redirectResults.map((r: { href: string; text: string; status: number; location: string }) => ({
+              href: r.href, text: r.text, status: r.status, location: r.location
+            }));
 
             // Add redirect issue to the issues list
             result.issues.push({

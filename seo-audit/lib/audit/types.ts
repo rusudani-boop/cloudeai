@@ -145,7 +145,7 @@ export interface ContentData {
 
   detectedLanguage: 'ka' | 'ru' | 'de' | 'en';
   titleLanguage: 'ka' | 'ru' | 'de' | 'en' | null;
-  titleContentLangMismatch: boolean;
+  titleContentLangMismatch: boolean | null;
 }
 
 /* ============================================================================
