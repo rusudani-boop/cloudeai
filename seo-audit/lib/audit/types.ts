@@ -148,6 +148,7 @@ export interface ContentData {
 
   readability: ReadabilityData;
   keywordDensity: KeywordDensityItem[];
+  longTailKeywords: { phrase: string; count: number }[];
 
   detectedLanguage: 'ka' | 'ru' | 'de' | 'en' | 'es';
   titleLanguage: 'ka' | 'ru' | 'de' | 'en' | 'es' | null;

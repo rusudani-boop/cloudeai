@@ -134,13 +134,16 @@ export async function checkLlmsTxt(
   baseUrl: string
 ): Promise<boolean> {
   try {
-    const url = new URL('/llms.txt', baseUrl).href;
-    const res = await requestUrl({ url, timeout: 8000, readBody: true });
+    // Always use root domain - parse URL and construct root
+    const parsed = new URL(baseUrl);
+    const rootUrl = `${parsed.protocol}//${parsed.host}/llms.txt`;
+
+    const res = await requestUrl({ url: rootUrl, timeout: 8000, readBody: true });
     // Check for 200 status and text content (not HTML error page)
     if (res.status === 200 && res.body && res.body.length > 5) {
       // Make sure it's not an HTML error page
       const bodyLower = res.body.toLowerCase();
-      if (!bodyLower.includes('<!doctype') && !bodyLower.includes('<html')) {
+      if (!bodyLower.includes('<!doctype') && !bodyLower.includes('<html') && !bodyLower.includes('<head')) {
         return true;
       }
     }
