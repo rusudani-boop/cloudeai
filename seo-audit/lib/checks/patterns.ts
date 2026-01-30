@@ -474,7 +474,7 @@ export const PATTERNS = {
     'za', 'zh', 'zu',
   ],
 
-  // Common stop words for keyword density (English, German, Russian, Georgian)
+  // Common stop words for keyword density (English, German, Russian, Georgian, Spanish)
   STOP_WORDS: new Set([
     // English
     'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of',
@@ -513,6 +513,22 @@ export const PATTERNS = {
     'აქ', 'იქ', 'ახლა', 'მაშინ', 'უკვე', 'ჯერ', 'კიდევ', 'მხოლოდ', 'ძალიან',
     'ყველა', 'ზოგი', 'თითქოს', 'რადგან', 'მაგრამ', 'თუმცა', 'ამიტომ', 'ასე',
     'ისე', 'მისი', 'ჩემი', 'შენი', 'ჩვენი', 'თქვენი', 'მათი', 'რომელიც',
+    // Spanish - articles, prepositions, conjunctions, pronouns
+    'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al',
+    'que', 'en', 'es', 'por', 'con', 'para', 'como', 'más', 'pero', 'sus', 'le',
+    'ya', 'se', 'no', 'hay', 'fue', 'todo', 'esta', 'ser', 'sobre', 'también',
+    'cuando', 'muy', 'sin', 'hasta', 'desde', 'donde', 'quien', 'entre', 'después',
+    'antes', 'durante', 'hacia', 'contra', 'según', 'lo', 'esto', 'eso', 'ese',
+    'esa', 'este', 'estos', 'estas', 'esos', 'esas', 'aquel', 'aquella', 'aquellos',
+    'aquellas', 'yo', 'tú', 'él', 'ella', 'nosotros', 'nosotras', 'vosotros',
+    'vosotras', 'ellos', 'ellas', 'mi', 'tu', 'su', 'nuestro', 'nuestra', 'vuestro',
+    'vuestra', 'mis', 'tus', 'sus', 'nuestros', 'nuestras', 'vuestros', 'vuestras',
+    'me', 'te', 'nos', 'os', 'les', 'qué', 'cuál', 'cuáles', 'quién', 'quiénes',
+    'cuándo', 'cómo', 'dónde', 'porque', 'aunque', 'sino', 'pues', 'mientras',
+    'si', 'ni', 'tanto', 'así', 'entonces', 'ahora', 'aquí', 'allí', 'siempre',
+    'nunca', 'todavía', 'aún', 'solo', 'sólo', 'cada', 'otro', 'otra', 'otros',
+    'otras', 'alguno', 'alguna', 'algunos', 'algunas', 'ninguno', 'ninguna',
+    'mucho', 'mucha', 'muchos', 'muchas', 'poco', 'poca', 'pocos', 'pocas',
   ]),
 
   // Trust signals patterns

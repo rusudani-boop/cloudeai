@@ -229,29 +229,25 @@ function calculateReadability(text: string): ReadabilityData {
     // German Flesch formula (Amstad) - adjusted for longer German words
     // German words average ~2.5 syllables vs English ~1.5
     // Standard Amstad: 180 - ASL - (58.5 * ASW)
-    // We use a slightly reduced coefficient for syllables to account for German morphology
-    fleschScore = 180 - avgSentenceLength - (52 * avgSyllablesPerWord);
+    fleschScore = 180 - avgSentenceLength - (48 * avgSyllablesPerWord);
   } else if (lang === 'ka') {
     // Georgian adapted formula
     // Georgian is agglutinative with many suffixes, average ~3 syllables per word
-    // Use a formula that doesn't penalize as heavily for syllable count
-    fleschScore = 206.835 - (1.015 * avgSentenceLength) - (40 * avgSyllablesPerWord);
+    fleschScore = 206.835 - (0.8 * avgSentenceLength) - (35 * avgSyllablesPerWord);
   } else if (lang === 'ru') {
     // Russian adapted formula
     // Russian averages ~2.5 syllables per word
-    fleschScore = 206.835 - (1.3 * avgSentenceLength) - (50 * avgSyllablesPerWord);
+    fleschScore = 206.835 - (1.0 * avgSentenceLength) - (45 * avgSyllablesPerWord);
   } else if (lang === 'es') {
     // Spanish Fernández Huerta formula (adapted from Flesch)
     // Spanish averages ~2.0 syllables per word
-    // Standard FH: 206.84 - (0.60 * P) - (1.02 * F)
-    // Where P = syllables per 100 words, F = words per sentence
-    // Simplified: 206.84 - (60 * ASW) - (1.02 * ASL)
-    fleschScore = 206.84 - (1.02 * avgSentenceLength) - (60 * avgSyllablesPerWord);
+    fleschScore = 206.84 - (1.0 * avgSentenceLength) - (55 * avgSyllablesPerWord);
   } else {
-    // English Flesch-Kincaid formula (standard)
-    // Most web content averages ~1.5 syllables/word and ~15 words/sentence
-    // Standard formula: 206.835 - (1.015 * ASL) - (84.6 * ASW)
-    fleschScore = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
+    // English Flesch-Kincaid formula - adjusted for web content
+    // Standard formula can be too aggressive for technical/professional content
+    // Original: 206.835 - (1.015 * ASL) - (84.6 * ASW)
+    // Adjusted to be less punishing for longer sentences common in web content
+    fleschScore = 206.835 - (0.9 * avgSentenceLength) - (70 * avgSyllablesPerWord);
   }
 
   // Clamp to 0-100 range
@@ -547,18 +543,87 @@ function analyzeContent(doc: Document, htmlLower: string, title: string, htmlLan
   const titleLanguage = visibleTitleText.length > 10 ? detectLanguage(visibleTitleText) : null;
 
   // Check if title language matches content language
-  const titleContentLangMismatch = titleLanguage && detectedLanguage && titleLanguage !== detectedLanguage;
+  // Allow brand names in English: if title is detected as English but declared language is different,
+  // check if removing brand-like words (short capitalized words, common tech/brand terms) leaves non-English text
+  let titleContentLangMismatch = titleLanguage && detectedLanguage && titleLanguage !== detectedLanguage;
+
+  if (titleContentLangMismatch && titleLanguage === 'en' && declaredLanguage && declaredLanguage !== 'en') {
+    // Common brand patterns: capitalized short words, tech/company suffixes
+    // If the title has brand-like patterns and the rest matches declared language, it's OK
+    const titleWords = visibleTitleText.split(/[\s\-–—|:]+/).filter(w => w.length > 0);
+
+    // Remove potential brand words: all-caps, CamelCase, short words (≤6 chars), common suffixes
+    const nonBrandWords = titleWords.filter(word => {
+      const cleanWord = word.replace(/[^\p{L}]/gu, '');
+      if (!cleanWord) return false;
+      // Skip if: all uppercase, very short, or looks like a brand name (CamelCase, trademark symbols)
+      if (cleanWord.length <= 4) return false; // Short words often brands: Nike, Zara, BMW
+      if (cleanWord === cleanWord.toUpperCase() && cleanWord.length <= 6) return false; // ACME, IBM
+      if (/^[A-Z][a-z]+[A-Z]/.test(cleanWord)) return false; // CamelCase like iPhone
+      return true;
+    });
+
+    // If remaining text matches declared language or is minimal, allow it
+    const remainingText = nonBrandWords.join(' ');
+    if (remainingText.length < 15 || nonBrandWords.length <= 2) {
+      // Title is mostly brand name, allow it
+      titleContentLangMismatch = false;
+    } else {
+      // Check if remaining text matches declared language
+      const remainingLang = detectLanguage(remainingText);
+      if (remainingLang === declaredLanguage) {
+        titleContentLangMismatch = false;
+      }
+    }
+  }
 
   // Keyword extraction - include Georgian, Cyrillic, German umlauts, Spanish
+  // Focus on longer words (4+ chars) which are more likely to be nouns/verbs
   const wordFreq: Record<string, number> = {};
+  const cleanedWords: string[] = [];
+
   words.forEach((w) => {
     // Keep Georgian (U+10A0-U+10FF), Cyrillic (U+0400-U+04FF), Latin + German umlauts + Spanish
     const word = w.toLowerCase().replace(/[^\u10A0-\u10FF\u0400-\u04FFa-z0-9äöüßáéíóúñ]/g, '');
-    if (word.length > 2 && !PATTERNS.STOP_WORDS.has(word)) wordFreq[word] = (wordFreq[word] || 0) + 1;
+    cleanedWords.push(word);
+    // Require 4+ characters for better noun/verb detection (excludes most prepositions/articles)
+    if (word.length >= 4 && !PATTERNS.STOP_WORDS.has(word)) {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    }
   });
   const keywordDensity = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([word, count]) => ({ word, count, percentage: Math.round((count / wordCount) * 10000) / 100 }));
 
-  return { headings, wordCount, characterCount, sentenceCount: sentences.length, paragraphCount: paragraphs.length, readingTime, titleH1Duplicate, duplicateParagraphs, aiScore, aiPhrases, readability, keywordDensity, detectedLanguage, titleLanguage, titleContentLangMismatch };
+  // Long-tail keyword extraction (2-3 word phrases)
+  const phraseFreq: Record<string, number> = {};
+  for (let i = 0; i < cleanedWords.length - 1; i++) {
+    const w1 = cleanedWords[i];
+    const w2 = cleanedWords[i + 1];
+    const w3 = cleanedWords[i + 2];
+
+    // Skip if words are stop words or too short
+    const isValidWord = (w: string) => w && w.length >= 3 && !PATTERNS.STOP_WORDS.has(w);
+
+    // 2-word phrases: both words must be valid
+    if (isValidWord(w1) && isValidWord(w2)) {
+      const phrase2 = `${w1} ${w2}`;
+      phraseFreq[phrase2] = (phraseFreq[phrase2] || 0) + 1;
+    }
+
+    // 3-word phrases: first and last must be valid, middle can be a stop word (for patterns like "best X for Y")
+    if (isValidWord(w1) && w2 && w2.length >= 2 && isValidWord(w3)) {
+      const phrase3 = `${w1} ${w2} ${w3}`;
+      phraseFreq[phrase3] = (phraseFreq[phrase3] || 0) + 1;
+    }
+  }
+
+  // Filter to phrases appearing 2+ times and sort by frequency
+  const longTailKeywords = Object.entries(phraseFreq)
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([phrase, count]) => ({ phrase, count }));
+
+  return { headings, wordCount, characterCount, sentenceCount: sentences.length, paragraphCount: paragraphs.length, readingTime, titleH1Duplicate, duplicateParagraphs, aiScore, aiPhrases, readability, keywordDensity, longTailKeywords, detectedLanguage, titleLanguage, titleContentLangMismatch };
 }
 
 // ============================================
