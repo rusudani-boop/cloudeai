@@ -1700,7 +1700,7 @@ function analyzeCoreWebVitals(doc: Document, images: any, performance: any, dom:
 
   // CLS Risk Analysis
   let clsRisk: 'low' | 'medium' | 'high' = 'low';
-  const dynamicContent = doc.querySelectorAll('[data-*], [class*="lazy"], [class*="dynamic"]').length;
+  const dynamicContent = doc.querySelectorAll('[data-src], [data-lazy], [data-load], [data-component], [class*="lazy"], [class*="dynamic"]').length;
 
   if (images.withoutDimensions > 3) { clsRisk = 'medium'; clsIssues.push('Images without explicit dimensions cause layout shift'); }
   if (images.withoutDimensions > 10) { clsRisk = 'high'; }
