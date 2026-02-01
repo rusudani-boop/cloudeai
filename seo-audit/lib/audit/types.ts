@@ -562,6 +562,187 @@ export interface ExternalResourcesData {
 }
 
 /* ============================================================================
+ * CORE WEB VITALS ESTIMATION
+ * ========================================================================== */
+
+export interface CoreWebVitalsData {
+  // LCP Risk Indicators
+  lcpRisk: 'low' | 'medium' | 'high';
+  lcpIssues: string[];
+  largestImage?: string;
+  heroImageOptimized: boolean;
+
+  // CLS Risk Indicators
+  clsRisk: 'low' | 'medium' | 'high';
+  clsIssues: string[];
+  imagesWithoutDimensions: number;
+  dynamicContent: number;
+
+  // FID/INP Risk Indicators
+  fidRisk: 'low' | 'medium' | 'high';
+  fidIssues: string[];
+  longTasks: number; // Large inline scripts
+  thirdPartyScripts: number;
+
+  score: number;
+}
+
+/* ============================================================================
+ * URL STRUCTURE ANALYSIS
+ * ========================================================================== */
+
+export interface UrlStructureData {
+  url: string;
+  length: number;
+  isOptimal: boolean; // < 75 chars
+  hasQueryParams: boolean;
+  queryParamCount: number;
+  isDynamic: boolean;
+  hasUnderscores: boolean;
+  hasUppercase: boolean;
+  depth: number; // Number of path segments
+  hasTrailingSlash: boolean;
+  hasFileExtension: boolean;
+  issues: string[];
+}
+
+/* ============================================================================
+ * CRAWL BUDGET & INDEXABILITY
+ * ========================================================================== */
+
+export interface CrawlData {
+  // Indexability
+  isIndexable: boolean;
+  indexabilityIssues: string[];
+
+  // Redirects
+  redirectChainLength: number;
+  redirectChain?: { url: string; status: number }[];
+  hasRedirectLoop: boolean;
+
+  // Pagination
+  hasPagination: boolean;
+  paginationMethod?: 'rel-prev-next' | 'load-more' | 'infinite-scroll' | 'numbered';
+  hasRelPrev: boolean;
+  hasRelNext: boolean;
+
+  // Canonicalization
+  canonicalIssues: string[];
+  selfCanonical: boolean;
+
+  // Soft 404 Risk
+  softFourOFourRisk: boolean;
+  thinContent: boolean;
+
+  // Meta Robots
+  metaRobots: string | null;
+  xRobotsTag: string | null;
+
+  score: number;
+}
+
+/* ============================================================================
+ * CONTENT QUALITY
+ * ========================================================================== */
+
+export interface ContentQualityData {
+  // Content Freshness
+  hasPublishDate: boolean;
+  publishDate?: string;
+  hasModifiedDate: boolean;
+  modifiedDate?: string;
+  contentAge?: number; // Days since publish
+
+  // Content Depth
+  isThinContent: boolean;
+  wordCount: number;
+  uniqueWordRatio: number;
+
+  // Above the Fold
+  aboveFoldContent: boolean;
+  hasHeroSection: boolean;
+
+  // Duplicate Content Risk
+  duplicateParagraphRatio: number;
+  boilerplateRatio: number;
+
+  // Content Structure
+  hasTableOfContents: boolean;
+  hasStructuredContent: boolean;
+  listCount: number;
+  tableCount: number;
+
+  score: number;
+}
+
+/* ============================================================================
+ * E-E-A-T SIGNALS
+ * ========================================================================== */
+
+export interface EEATData {
+  // Experience
+  hasOriginalContent: boolean;
+  hasFirstPersonNarrative: boolean;
+
+  // Expertise
+  hasAuthorBio: boolean;
+  authorName?: string;
+  hasCredentials: boolean;
+  hasExpertSchema: boolean;
+
+  // Authoritativeness
+  hasCitations: boolean;
+  citationCount: number;
+  hasExternalReferences: boolean;
+  hasAwards: boolean;
+
+  // Trustworthiness
+  hasSecureConnection: boolean;
+  hasPrivacyPolicy: boolean;
+  hasContactInfo: boolean;
+  hasPhysicalAddress: boolean;
+  hasAboutPage: boolean;
+  hasReviews: boolean;
+
+  // Overall
+  score: number;
+  issues: string[];
+}
+
+/* ============================================================================
+ * SERVER RESPONSE
+ * ========================================================================== */
+
+export interface ServerResponseData {
+  // Protocol
+  httpVersion?: string;
+  isHttp2: boolean;
+  isHttp3: boolean;
+
+  // Timing
+  ttfb?: number;
+  responseTime?: number;
+
+  // Compression
+  hasCompression: boolean;
+  compressionType?: 'gzip' | 'br' | 'deflate' | 'none';
+  contentLength?: number;
+  uncompressedSize?: number;
+
+  // Caching
+  hasCacheControl: boolean;
+  cacheControlValue?: string;
+  hasETag: boolean;
+  maxAge?: number;
+
+  // Headers
+  serverHeader?: string;
+  poweredBy?: string;
+
+  score: number;
+}
+
+/* ============================================================================
  * AUDIT RESULT
  * ========================================================================== */
 
@@ -598,6 +779,14 @@ export interface AuditResult {
   trustSignals: TrustSignalsData;
   mobile: MobileData;
   externalResources: ExternalResourcesData;
+
+  // New additions
+  coreWebVitals: CoreWebVitalsData;
+  urlStructure: UrlStructureData;
+  crawl: CrawlData;
+  contentQuality: ContentQualityData;
+  eeat: EEATData;
+  serverResponse: ServerResponseData;
 
   issues: AuditIssue[];
   passed: string[];
