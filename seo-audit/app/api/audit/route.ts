@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
         if (robots) {
           result.technical.robotsTxt = { found: true, content: robots, blocksAll: robots.includes('Disallow: /'), hasSitemap: robots.toLowerCase().includes('sitemap:') };
         }
-        result.technical.sitemap = sitemap;
-        result.technical.llmsTxt = { found: llmsTxt, mentioned: result.technical.llmsTxt?.mentioned || false };
+        result.technical.sitemap = { ...sitemap, urlCount: sitemap.urlCount };
+        result.technical.llmsTxt = { found: llmsTxt.found, mentioned: result.technical.llmsTxt?.mentioned || false, content: llmsTxt.content };
 
         // Check internal links for redirects (limit to 10 for performance)
         if (result.links.internalUrls && result.links.internalUrls.length > 0) {

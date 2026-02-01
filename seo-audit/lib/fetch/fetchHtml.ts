@@ -77,22 +77,39 @@ export async function fetchRobotsTxt(
 
 export async function checkSitemap(
   baseUrl: string
-): Promise<{ found: boolean; url: string | null }> {
-  try {
-    const url = new URL('/sitemap.xml', baseUrl).href;
-    const res = await requestUrl({ url, timeout: 5000 });
+): Promise<{ found: boolean; url: string | null; urlCount?: number }> {
+  // Try multiple sitemap locations
+  const sitemapUrls = [
+    new URL('/sitemap.xml', baseUrl).href,
+    new URL('/sitemap_index.xml', baseUrl).href,
+    new URL('/sitemap/', baseUrl).href,
+    new URL('/sitemaps/sitemap.xml', baseUrl).href,
+  ];
 
-    const found = Boolean(
-      res.status === 200 &&
-      (res.body?.includes('<urlset') ||
-        res.body?.includes('<?xml') ||
-        res.body?.includes('<sitemapindex'))
-    );
+  for (const url of sitemapUrls) {
+    try {
+      const res = await requestUrl({ url, timeout: 8000, readBody: true });
 
-    return { found, url: found ? url : null };
-  } catch {
-    return { found: false, url: null };
+      const found = Boolean(
+        res.status === 200 &&
+        res.body &&
+        (res.body.includes('<urlset') ||
+          res.body.includes('<sitemapindex') ||
+          (res.body.includes('<?xml') && (res.body.includes('<url>') || res.body.includes('<sitemap>'))))
+      );
+
+      if (found && res.body) {
+        // Count URLs in sitemap
+        const urlMatches = res.body.match(/<loc>/g);
+        const urlCount = urlMatches ? urlMatches.length : 0;
+        return { found: true, url, urlCount };
+      }
+    } catch {
+      // Continue to next URL
+    }
   }
+
+  return { found: false, url: null };
 }
 
 // --------------------
@@ -132,24 +149,38 @@ export async function checkRedirect(
 
 export async function checkLlmsTxt(
   baseUrl: string
-): Promise<boolean> {
+): Promise<{ found: boolean; content?: string }> {
   try {
     // Always use root domain - parse URL and construct root
     const parsed = new URL(baseUrl);
     const rootUrl = `${parsed.protocol}//${parsed.host}/llms.txt`;
 
-    const res = await requestUrl({ url: rootUrl, timeout: 8000, readBody: true });
-    // Check for 200 status and text content (not HTML error page)
-    if (res.status === 200 && res.body && res.body.length > 5) {
-      // Make sure it's not an HTML error page
-      const bodyLower = res.body.toLowerCase();
-      if (!bodyLower.includes('<!doctype') && !bodyLower.includes('<html') && !bodyLower.includes('<head')) {
-        return true;
+    // Try with both http and https if needed
+    const urlsToTry = [rootUrl];
+    if (parsed.protocol === 'https:') {
+      urlsToTry.push(`http://${parsed.host}/llms.txt`);
+    }
+
+    for (const url of urlsToTry) {
+      try {
+        const res = await requestUrl({ url, timeout: 10000, readBody: true });
+        // Check for 200 status and text content (not HTML error page)
+        if (res.status === 200 && res.body && res.body.length > 10) {
+          // Make sure it's not an HTML error page
+          const bodyLower = res.body.toLowerCase().trim();
+          const firstChar = bodyLower.charAt(0);
+          // llms.txt should start with text, not HTML
+          if (firstChar !== '<' && !bodyLower.startsWith('<!doctype') && !bodyLower.startsWith('<html')) {
+            return { found: true, content: res.body.substring(0, 500) };
+          }
+        }
+      } catch {
+        continue;
       }
     }
-    return false;
+    return { found: false };
   } catch {
-    return false;
+    return { found: false };
   }
 }
 
@@ -160,22 +191,58 @@ export async function checkLlmsTxt(
 export async function checkUrlInSitemap(
   baseUrl: string,
   targetUrl: string
-): Promise<{ found: boolean; inSitemap: boolean }> {
-  try {
-    const sitemapUrl = new URL('/sitemap.xml', baseUrl).href;
-    const res = await requestUrl({ url: sitemapUrl, timeout: 10000 });
+): Promise<{ found: boolean; inSitemap: boolean; sitemapUrl?: string }> {
+  const sitemapUrls = [
+    new URL('/sitemap.xml', baseUrl).href,
+    new URL('/sitemap_index.xml', baseUrl).href,
+    new URL('/sitemap/', baseUrl).href,
+  ];
 
-    if (res.status !== 200 || !res.body) {
-      return { found: false, inSitemap: false };
+  for (const sitemapUrl of sitemapUrls) {
+    try {
+      const res = await requestUrl({ url: sitemapUrl, timeout: 10000, readBody: true });
+
+      if (res.status !== 200 || !res.body) {
+        continue;
+      }
+
+      // Check if it's a valid sitemap
+      if (!res.body.includes('<urlset') && !res.body.includes('<sitemapindex')) {
+        continue;
+      }
+
+      const normalizedTarget = targetUrl.toLowerCase().replace(/\/$/, '');
+      const inSitemap = res.body.toLowerCase().includes(normalizedTarget);
+
+      if (inSitemap) {
+        return { found: true, inSitemap: true, sitemapUrl };
+      }
+
+      // If it's a sitemap index, check child sitemaps
+      if (res.body.includes('<sitemapindex')) {
+        const locMatches = res.body.match(/<loc>([^<]+)<\/loc>/g);
+        if (locMatches) {
+          for (const locMatch of locMatches.slice(0, 5)) { // Check first 5 child sitemaps
+            const childUrl = locMatch.replace(/<\/?loc>/g, '');
+            try {
+              const childRes = await requestUrl({ url: childUrl, timeout: 8000, readBody: true });
+              if (childRes.status === 200 && childRes.body?.toLowerCase().includes(normalizedTarget)) {
+                return { found: true, inSitemap: true, sitemapUrl: childUrl };
+              }
+            } catch {
+              // Continue to next child
+            }
+          }
+        }
+      }
+
+      return { found: true, inSitemap: false, sitemapUrl };
+    } catch {
+      continue;
     }
-
-    const normalizedTarget = targetUrl.toLowerCase().replace(/\/$/, '');
-    const inSitemap = res.body.toLowerCase().includes(normalizedTarget);
-
-    return { found: true, inSitemap };
-  } catch {
-    return { found: false, inSitemap: false };
   }
+
+  return { found: false, inSitemap: false };
 }
 
 // --------------------
@@ -500,4 +567,128 @@ export async function checkSSLCertificate(
       error: e instanceof Error ? e.message : 'Error',
     };
   }
+}
+
+// --------------------
+// Server Response Check
+// --------------------
+
+export async function checkServerResponse(url: string): Promise<{
+  httpVersion?: string;
+  isHttp2: boolean;
+  isHttp3: boolean;
+  ttfb?: number;
+  hasCompression: boolean;
+  compressionType?: 'gzip' | 'br' | 'deflate' | 'none';
+  contentLength?: number;
+  hasCacheControl: boolean;
+  cacheControlValue?: string;
+  hasETag: boolean;
+  maxAge?: number;
+  serverHeader?: string;
+  poweredBy?: string;
+}> {
+  try {
+    const startTime = Date.now();
+    const res = await requestUrl({
+      url,
+      timeout: 10000,
+      method: 'HEAD',
+      readBody: false,
+    });
+    const ttfb = Date.now() - startTime;
+
+    const headers = res.headers;
+    const contentEncoding = headers['content-encoding'] || '';
+    const cacheControl = headers['cache-control'] || '';
+    const contentLength = headers['content-length'] ? parseInt(headers['content-length']) : undefined;
+
+    let compressionType: 'gzip' | 'br' | 'deflate' | 'none' = 'none';
+    if (contentEncoding.includes('br')) compressionType = 'br';
+    else if (contentEncoding.includes('gzip')) compressionType = 'gzip';
+    else if (contentEncoding.includes('deflate')) compressionType = 'deflate';
+
+    let maxAge: number | undefined;
+    const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+    if (maxAgeMatch) maxAge = parseInt(maxAgeMatch[1]);
+
+    // HTTP/2 detection from headers (alt-svc, or server push hints)
+    const altSvc = headers['alt-svc'] || '';
+    const isHttp2 = altSvc.includes('h2') || altSvc.includes('h2c');
+    const isHttp3 = altSvc.includes('h3');
+
+    return {
+      httpVersion: isHttp3 ? '3' : isHttp2 ? '2' : '1.1',
+      isHttp2,
+      isHttp3,
+      ttfb,
+      hasCompression: compressionType !== 'none',
+      compressionType,
+      contentLength,
+      hasCacheControl: !!cacheControl,
+      cacheControlValue: cacheControl || undefined,
+      hasETag: !!headers['etag'],
+      maxAge,
+      serverHeader: Array.isArray(headers['server']) ? headers['server'][0] : headers['server'] || undefined,
+      poweredBy: Array.isArray(headers['x-powered-by']) ? headers['x-powered-by'][0] : headers['x-powered-by'] || undefined,
+    };
+  } catch {
+    return {
+      isHttp2: false,
+      isHttp3: false,
+      hasCompression: false,
+      hasCacheControl: false,
+      hasETag: false,
+    };
+  }
+}
+
+// --------------------
+// Redirect Chain Check
+// --------------------
+
+export async function checkRedirectChain(url: string, maxRedirects = 10): Promise<{
+  chain: { url: string; status: number }[];
+  hasLoop: boolean;
+  finalUrl: string;
+}> {
+  const chain: { url: string; status: number }[] = [];
+  const visited = new Set<string>();
+  let currentUrl = url;
+  let hasLoop = false;
+
+  for (let i = 0; i < maxRedirects; i++) {
+    if (visited.has(currentUrl)) {
+      hasLoop = true;
+      break;
+    }
+    visited.add(currentUrl);
+
+    try {
+      const res = await requestUrl({
+        url: currentUrl,
+        timeout: 5000,
+        method: 'HEAD',
+        followRedirects: false,
+        readBody: false,
+      });
+
+      chain.push({ url: currentUrl, status: res.status });
+
+      if (res.status >= 300 && res.status < 400 && res.headers.location) {
+        const location = res.headers.location;
+        currentUrl = location.startsWith('http') ? location : new URL(location, currentUrl).href;
+      } else {
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
+
+  return {
+    chain,
+    hasLoop,
+    finalUrl: currentUrl,
+  };
 }

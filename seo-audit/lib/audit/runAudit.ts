@@ -43,13 +43,21 @@ export async function runAudit(
   const mobile = analyzeMobile(doc, html, sourceUrl);
   const externalResources = analyzeExternalResources(doc, sourceUrl);
 
-  const issues = collectIssues({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, mobile });
-  const passed = collectPassed({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, mobile });
+  // New analyses
+  const coreWebVitals = analyzeCoreWebVitals(doc, images, performance, domData);
+  const urlStructure = analyzeUrlStructure(sourceUrl);
+  const crawl = analyzeCrawl(doc, technical, content);
+  const contentQuality = analyzeContentQuality(doc, content);
+  const eeat = analyzeEEAT(doc, trustSignals, security, schema);
+  const serverResponse = getDefaultServerResponse();
+
+  const issues = collectIssues({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, mobile, coreWebVitals, urlStructure, crawl, contentQuality, eeat });
+  const passed = collectPassed({ technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, mobile, coreWebVitals, urlStructure, crawl, contentQuality, eeat, serverResponse });
   const score = calculateScore(issues, passed);
 
   // Calculate actual checks performed (issues found + passed + base neutral checks)
   // Base checks: items that are checked but may not appear in issues or passed (like optional hreflang)
-  const baseChecks = 15; // robots.txt, sitemap, performance metrics, security headers, etc.
+  const baseChecks = 25; // robots.txt, sitemap, performance metrics, security headers, CWV, etc.
   const totalChecks = issues.length + passed.length + baseChecks;
 
   return {
@@ -65,7 +73,9 @@ export async function runAudit(
       totalChecks,
       passedChecks: passed.length,
     },
-    technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, mobile, externalResources, issues, passed,
+    technical, international, content, links, images, schema, social, accessibility, dom: domData, performance, security, platform, trustSignals, mobile, externalResources,
+    coreWebVitals, urlStructure, crawl, contentQuality, eeat, serverResponse,
+    issues, passed,
   };
 }
 
@@ -1665,6 +1675,323 @@ function collectIssues(data: any): AuditIssue[] {
   if (mobile && mobile.hasUserScalable) issues.push({ id: 'no-zoom', severity: 'medium', category: 'ხელმისაწვდომობა', issue: 'Zooming is disabled (user-scalable=no)', issueGe: 'მასშტაბირება გამორთულია (user-scalable=no)', location: '<meta name="viewport">', fix: 'Remove user-scalable=no from viewport', fixGe: 'წაშალეთ user-scalable=no viewport-იდან', details: `${SEVERITY_PHRASES.medium} მასშტაბირების გამორთვა აფერხებს მხედველობის პრობლემის მქონე მომხმარებლებს. WCAG მოითხოვს მასშტაბირების შესაძლებლობას.` });
 
   return issues;
+}
+
+// ============================================
+// CORE WEB VITALS ESTIMATION
+// ============================================
+
+function analyzeCoreWebVitals(doc: Document, images: any, performance: any, dom: any): any {
+  const lcpIssues: string[] = [];
+  const clsIssues: string[] = [];
+  const fidIssues: string[] = [];
+
+  // LCP Risk Analysis
+  let lcpRisk: 'low' | 'medium' | 'high' = 'low';
+  const heroImage = doc.querySelector('img[src]:not([loading="lazy"])');
+  const heroImageOptimized = heroImage ? (heroImage.hasAttribute('fetchpriority') || heroImage.hasAttribute('decoding')) : true;
+
+  if (images.withoutDimensions > 5) { lcpRisk = 'high'; lcpIssues.push('Many images without dimensions'); }
+  else if (images.withoutDimensions > 0) { lcpRisk = 'medium'; lcpIssues.push(`${images.withoutDimensions} images without dimensions`); }
+
+  if (performance.renderBlockingScripts > 3) { lcpRisk = 'high'; lcpIssues.push('Multiple render-blocking scripts'); }
+  if (performance.fontsWithoutDisplay > 0) { lcpIssues.push('Fonts without display:swap'); }
+  if (!heroImageOptimized && heroImage) { lcpIssues.push('Hero image not optimized (no fetchpriority)'); }
+
+  // CLS Risk Analysis
+  let clsRisk: 'low' | 'medium' | 'high' = 'low';
+  const dynamicContent = doc.querySelectorAll('[data-*], [class*="lazy"], [class*="dynamic"]').length;
+
+  if (images.withoutDimensions > 3) { clsRisk = 'medium'; clsIssues.push('Images without explicit dimensions cause layout shift'); }
+  if (images.withoutDimensions > 10) { clsRisk = 'high'; }
+  if (performance.webFonts > 3) { clsIssues.push('Multiple web fonts may cause FOIT/FOUT'); }
+  if (dynamicContent > 10) { clsIssues.push('Dynamic content may cause layout shifts'); }
+
+  // FID/INP Risk Analysis
+  let fidRisk: 'low' | 'medium' | 'high' = 'low';
+  const longTasks = dom.inlineScripts > 5 ? dom.inlineScripts : 0;
+  const thirdPartyScripts = performance.totalScripts - dom.inlineScripts;
+
+  if (performance.totalScripts > 15) { fidRisk = 'high'; fidIssues.push('Too many scripts blocking main thread'); }
+  else if (performance.totalScripts > 8) { fidRisk = 'medium'; fidIssues.push('Multiple scripts may delay interactivity'); }
+  if (longTasks > 3) { fidIssues.push('Large inline scripts may cause long tasks'); }
+  if (thirdPartyScripts > 5) { fidIssues.push('Third-party scripts impacting performance'); }
+
+  // Calculate score
+  const riskScores = { low: 100, medium: 70, high: 40 };
+  const score = Math.round((riskScores[lcpRisk] + riskScores[clsRisk] + riskScores[fidRisk]) / 3);
+
+  return {
+    lcpRisk, lcpIssues, largestImage: heroImage?.getAttribute('src') || undefined, heroImageOptimized,
+    clsRisk, clsIssues, imagesWithoutDimensions: images.withoutDimensions, dynamicContent,
+    fidRisk, fidIssues, longTasks, thirdPartyScripts,
+    score
+  };
+}
+
+// ============================================
+// URL STRUCTURE ANALYSIS
+// ============================================
+
+function analyzeUrlStructure(sourceUrl: string): any {
+  const issues: string[] = [];
+  let parsed: URL;
+
+  try {
+    parsed = new URL(sourceUrl);
+  } catch {
+    return { url: sourceUrl, length: sourceUrl.length, isOptimal: false, hasQueryParams: false, queryParamCount: 0, isDynamic: false, hasUnderscores: false, hasUppercase: false, depth: 0, hasTrailingSlash: false, hasFileExtension: false, issues: ['Invalid URL format'] };
+  }
+
+  const path = parsed.pathname;
+  const length = sourceUrl.length;
+  const hasQueryParams = parsed.search.length > 0;
+  const queryParamCount = Array.from(parsed.searchParams).length;
+  const isDynamic = /[?&](id|page|p|cat|category|tag|s|q|query|search|sid|session)=/i.test(sourceUrl);
+  const hasUnderscores = path.includes('_');
+  const hasUppercase = /[A-Z]/.test(path);
+  const depth = path.split('/').filter(s => s).length;
+  const hasTrailingSlash = path.endsWith('/') && path !== '/';
+  const hasFileExtension = /\.(html|htm|php|asp|aspx|jsp)$/i.test(path);
+
+  if (length > 100) issues.push('URL too long (>100 chars)');
+  else if (length > 75) issues.push('URL length suboptimal (>75 chars)');
+  if (hasQueryParams && queryParamCount > 3) issues.push('Too many query parameters');
+  if (isDynamic) issues.push('Dynamic URL with session/ID parameters');
+  if (hasUnderscores) issues.push('Use hyphens instead of underscores');
+  if (hasUppercase) issues.push('URL contains uppercase letters');
+  if (depth > 4) issues.push('URL too deep (>4 levels)');
+  if (hasFileExtension) issues.push('URL has file extension (consider clean URLs)');
+
+  return {
+    url: sourceUrl, length, isOptimal: length <= 75 && !hasQueryParams && !hasUnderscores && !hasUppercase && depth <= 4,
+    hasQueryParams, queryParamCount, isDynamic, hasUnderscores, hasUppercase, depth, hasTrailingSlash, hasFileExtension, issues
+  };
+}
+
+// ============================================
+// CRAWL DATA ANALYSIS
+// ============================================
+
+function analyzeCrawl(doc: Document, technical: any, content: any): any {
+  const indexabilityIssues: string[] = [];
+  const canonicalIssues: string[] = [];
+
+  // Indexability
+  const metaRobots = doc.querySelector('meta[name="robots"]')?.getAttribute('content') || null;
+  const xRobotsTag = technical.robots?.xRobotsTag || null;
+  const hasNoindex = metaRobots?.toLowerCase().includes('noindex') || xRobotsTag?.toLowerCase().includes('noindex');
+  const hasNofollow = metaRobots?.toLowerCase().includes('nofollow');
+
+  if (hasNoindex) indexabilityIssues.push('Page has noindex directive');
+  if (hasNofollow) indexabilityIssues.push('Page has nofollow directive');
+  if (technical.robotsTxt?.blocksAll) indexabilityIssues.push('robots.txt blocks all crawlers');
+
+  // Canonicalization
+  const canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href');
+  const selfCanonical = canonical === technical.canonical?.href;
+  if (!canonical) canonicalIssues.push('Missing canonical tag');
+  if (technical.canonical?.count > 1) canonicalIssues.push('Multiple canonical tags');
+  if (technical.canonical?.isCrossDomain) canonicalIssues.push('Cross-domain canonical');
+
+  // Pagination
+  const relPrev = doc.querySelector('link[rel="prev"]');
+  const relNext = doc.querySelector('link[rel="next"]');
+  const hasPagination = !!(relPrev || relNext || doc.querySelector('.pagination, .pager, nav[aria-label*="pagination"]'));
+  let paginationMethod: string | undefined;
+  if (relPrev || relNext) paginationMethod = 'rel-prev-next';
+  else if (doc.querySelector('[class*="load-more"], [data-load-more]')) paginationMethod = 'load-more';
+  else if (doc.querySelector('[class*="infinite"], [data-infinite]')) paginationMethod = 'infinite-scroll';
+  else if (hasPagination) paginationMethod = 'numbered';
+
+  // Thin content / Soft 404 risk
+  const thinContent = content.wordCount < 300;
+  const softFourOFourRisk = thinContent && (content.headings.h1.length === 0 || content.headings.h1[0]?.toLowerCase().includes('not found') || content.headings.h1[0]?.toLowerCase().includes('error'));
+
+  // Score
+  let score = 100;
+  if (hasNoindex) score -= 40;
+  if (canonicalIssues.length > 0) score -= 15;
+  if (thinContent) score -= 10;
+  if (softFourOFourRisk) score -= 20;
+
+  return {
+    isIndexable: !hasNoindex,
+    indexabilityIssues,
+    redirectChainLength: 0, // Will be set by API
+    redirectChain: undefined,
+    hasRedirectLoop: false,
+    hasPagination,
+    paginationMethod,
+    hasRelPrev: !!relPrev,
+    hasRelNext: !!relNext,
+    canonicalIssues,
+    selfCanonical,
+    softFourOFourRisk,
+    thinContent,
+    metaRobots,
+    xRobotsTag,
+    score: Math.max(0, score)
+  };
+}
+
+// ============================================
+// CONTENT QUALITY ANALYSIS
+// ============================================
+
+function analyzeContentQuality(doc: Document, content: any): any {
+  // Content Freshness
+  const publishDateMeta = doc.querySelector('meta[property="article:published_time"], meta[name="pubdate"], time[datetime][pubdate]');
+  const modifiedDateMeta = doc.querySelector('meta[property="article:modified_time"], meta[name="last-modified"]');
+  const publishDate = publishDateMeta?.getAttribute('content') || publishDateMeta?.getAttribute('datetime');
+  const modifiedDate = modifiedDateMeta?.getAttribute('content');
+
+  let contentAge: number | undefined;
+  if (publishDate) {
+    try {
+      contentAge = Math.floor((Date.now() - new Date(publishDate).getTime()) / (1000 * 60 * 60 * 24));
+    } catch { /* ignore */ }
+  }
+
+  // Content Structure
+  const lists = doc.querySelectorAll('ul, ol');
+  const tables = doc.querySelectorAll('table');
+  const hasTableOfContents = !!doc.querySelector('[class*="toc"], [class*="table-of-contents"], #toc, nav[class*="content"]');
+  const hasStructuredContent = lists.length > 2 || tables.length > 0 || hasTableOfContents;
+
+  // Above the fold
+  const hasHeroSection = !!doc.querySelector('[class*="hero"], [class*="banner"], header img, .jumbotron');
+  const firstParagraph = doc.querySelector('main p, article p, .content p');
+  const aboveFoldContent = !!(firstParagraph && firstParagraph.textContent && firstParagraph.textContent.length > 100);
+
+  // Unique word ratio
+  const words = content.keywordDensity?.map((k: any) => k.word) || [];
+  const uniqueWordRatio = words.length > 0 ? words.length / content.wordCount : 0;
+
+  // Boilerplate ratio estimation
+  const mainContent = doc.querySelector('main, article, [role="main"], .content')?.textContent?.length || 0;
+  const totalText = doc.body?.textContent?.length || 1;
+  const boilerplateRatio = 1 - (mainContent / totalText);
+
+  // Score
+  let score = 100;
+  if (content.wordCount < 300) score -= 20;
+  if (content.wordCount < 100) score -= 20;
+  if (!publishDate) score -= 5;
+  if (contentAge && contentAge > 365) score -= 10;
+  if (!hasStructuredContent) score -= 10;
+  if (boilerplateRatio > 0.7) score -= 15;
+  if (content.duplicateParagraphs > 2) score -= 10;
+
+  return {
+    hasPublishDate: !!publishDate,
+    publishDate,
+    hasModifiedDate: !!modifiedDate,
+    modifiedDate,
+    contentAge,
+    isThinContent: content.wordCount < 300,
+    wordCount: content.wordCount,
+    uniqueWordRatio,
+    aboveFoldContent,
+    hasHeroSection,
+    duplicateParagraphRatio: content.paragraphCount > 0 ? content.duplicateParagraphs / content.paragraphCount : 0,
+    boilerplateRatio,
+    hasTableOfContents,
+    hasStructuredContent,
+    listCount: lists.length,
+    tableCount: tables.length,
+    score: Math.max(0, score)
+  };
+}
+
+// ============================================
+// E-E-A-T SIGNALS ANALYSIS
+// ============================================
+
+function analyzeEEAT(doc: Document, trustSignals: any, security: any, schema: any): any {
+  const issues: string[] = [];
+
+  // Experience - First person narrative detection
+  const bodyText = doc.body?.textContent?.toLowerCase() || '';
+  const hasFirstPersonNarrative = /\b(i |i'|my |we |we'|our |myself|ourselves)\b/.test(bodyText);
+  const hasOriginalContent = bodyText.length > 1000 && !bodyText.includes('lorem ipsum');
+
+  // Expertise - Author information
+  const authorElement = doc.querySelector('[rel="author"], .author, [class*="author"], [itemprop="author"]');
+  const authorName = authorElement?.textContent?.trim();
+  const hasAuthorBio = !!doc.querySelector('.author-bio, [class*="author-bio"], [class*="about-author"]');
+  const hasCredentials = !!doc.querySelector('[class*="credential"], [class*="qualification"], .md, .phd, .expert');
+  const hasExpertSchema = schema.types.some((t: string) => t.toLowerCase().includes('person') || t.toLowerCase().includes('author'));
+
+  // Authoritativeness - Citations and references
+  const citations = doc.querySelectorAll('cite, blockquote[cite], [class*="citation"], [class*="source"]');
+  const externalLinks = doc.querySelectorAll('a[href^="http"]:not([href*="' + (new URL(doc.URL || 'http://example.com').hostname) + '"])');
+  const hasAwards = !!doc.querySelector('[class*="award"], [class*="badge"], [class*="recognition"]');
+
+  // Trustworthiness
+  const hasSecureConnection = security.isHttps;
+  const hasPrivacyPolicy = trustSignals.hasPrivacyPage;
+  const hasContactInfo = trustSignals.hasContactPage || trustSignals.hasPhone || trustSignals.hasEmail;
+  const hasPhysicalAddress = trustSignals.hasAddress;
+  const hasAboutPage = trustSignals.hasAboutPage;
+  const hasReviews = trustSignals.hasReviews || !!doc.querySelector('[class*="review"], [class*="testimonial"]');
+
+  // Issues
+  if (!hasAuthorBio) issues.push('No author bio/information');
+  if (citations.length === 0) issues.push('No citations or references');
+  if (!hasContactInfo) issues.push('No contact information');
+  if (!hasPrivacyPolicy) issues.push('No privacy policy');
+  if (!hasAboutPage) issues.push('No about page');
+
+  // Score
+  let score = 50; // Base score
+  if (hasAuthorBio) score += 10;
+  if (authorName) score += 5;
+  if (hasCredentials) score += 10;
+  if (citations.length > 0) score += 10;
+  if (hasSecureConnection) score += 5;
+  if (hasPrivacyPolicy) score += 5;
+  if (hasContactInfo) score += 5;
+  if (hasPhysicalAddress) score += 5;
+  if (hasAboutPage) score += 5;
+  if (hasReviews) score += 5;
+  if (hasOriginalContent) score += 5;
+
+  return {
+    hasOriginalContent,
+    hasFirstPersonNarrative,
+    hasAuthorBio,
+    authorName,
+    hasCredentials,
+    hasExpertSchema,
+    hasCitations: citations.length > 0,
+    citationCount: citations.length,
+    hasExternalReferences: externalLinks.length > 0,
+    hasAwards,
+    hasSecureConnection,
+    hasPrivacyPolicy,
+    hasContactInfo,
+    hasPhysicalAddress,
+    hasAboutPage,
+    hasReviews,
+    score: Math.min(100, score),
+    issues
+  };
+}
+
+// ============================================
+// DEFAULT SERVER RESPONSE (set by API)
+// ============================================
+
+function getDefaultServerResponse(): any {
+  return {
+    isHttp2: false,
+    isHttp3: false,
+    hasCompression: false,
+    hasCacheControl: false,
+    hasETag: false,
+    score: 50
+  };
 }
 
 // ============================================
