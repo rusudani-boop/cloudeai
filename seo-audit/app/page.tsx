@@ -29,7 +29,7 @@ interface AuditResult {
   timestamp: string;
   fetchMethod: 'url' | 'html';
   summary: { criticalIssues: number; highIssues: number; mediumIssues: number; lowIssues: number; totalChecks: number; passedChecks: number; };
-  technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null; urlCount?: number; pageInSitemap?: boolean }; llmsTxt: { found: boolean; mentioned: boolean }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
+  technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null; urlCount?: number; pageInSitemap?: boolean }; llmsTxt: { found: boolean; mentioned: boolean; content?: string }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
   international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; duplicateHreflangs?: string[]; nonCanonicalHreflangs?: string[]; };
   content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; detectedLanguage?: string; };
   links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; internalUrls?: { href: string; text: string }[]; externalUrls?: { href: string; text: string }[]; redirectLinks?: number; redirectList?: { href: string; text: string; status: number; location: string }[]; brokenExternalLinks?: number; brokenExternalList?: { href: string; text: string; status: number; error?: string }[]; };
@@ -75,6 +75,7 @@ const Icons = {
   Chart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
   Smartphone: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
   Server: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>,
+  List: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>,
 };
 
 // Chart Components
@@ -145,10 +146,13 @@ const HorizontalBar = ({ value, max, color, label }: { value: number; max: numbe
 export default function SEOChecker() {
   const [url, setUrl] = useState('');
   const [htmlInput, setHtmlInput] = useState('');
-  const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
+  const [inputMode, setInputMode] = useState<'url' | 'html' | 'batch'>('url');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [results, setResults] = useState<AuditResult | null>(null);
+  const [batchUrls, setBatchUrls] = useState('');
+  const [batchResults, setBatchResults] = useState<{url: string; score: number; issues: number; status: 'pending' | 'loading' | 'done' | 'error'; error?: string; result?: AuditResult}[]>([]);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isDragging, setIsDragging] = useState(false);
 
@@ -168,6 +172,55 @@ export default function SEOChecker() {
       setExpanded(allSections.reduce((acc, s) => ({ ...acc, [s]: true }), {}));
     } catch (e) { setError(e instanceof Error ? e.message : 'შეცდომა მოხდა'); }
     finally { setLoading(false); }
+  };
+
+  const handleBatchAnalyze = async () => {
+    const urls = batchUrls.split('\n').map(u => u.trim()).filter(u => u && (u.startsWith('http://') || u.startsWith('https://')));
+    if (urls.length === 0) {
+      setError('შეიყვანეთ მინიმუმ 1 ვალიდური URL (http:// ან https://)');
+      return;
+    }
+    if (urls.length > 10) {
+      setError('მაქსიმუმ 10 URL-ის შემოწმება შეიძლება ერთდროულად');
+      return;
+    }
+
+    setError('');
+    setResults(null);
+    setBatchResults(urls.map(u => ({ url: u, score: 0, issues: 0, status: 'pending' })));
+    setBatchProgress({ current: 0, total: urls.length });
+
+    for (let i = 0; i < urls.length; i++) {
+      setBatchResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'loading' } : r));
+      setBatchProgress({ current: i + 1, total: urls.length });
+
+      try {
+        const res = await fetch('/api/audit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urls[i] })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setBatchResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'error', error: data.error } : r));
+        } else {
+          setBatchResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'done', score: data.score, issues: data.issues.length, result: data } : r));
+        }
+      } catch (e) {
+        setBatchResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'error', error: e instanceof Error ? e.message : 'შეცდომა' } : r));
+      }
+
+      // Small delay between requests to avoid rate limiting
+      if (i < urls.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  };
+
+  const selectBatchResult = (result: AuditResult) => {
+    setResults(result);
+    setExpanded(allSections.reduce((acc, s) => ({ ...acc, [s]: true }), {}));
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -231,8 +284,9 @@ export default function SEOChecker() {
         {/* Input */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
           <div className="flex gap-3 mb-5">
-            <button onClick={() => { setInputMode('url'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'url' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.Globe /> URL-ით</button>
-            <button onClick={() => { setInputMode('html'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'html' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.Code /> HTML ჩასმა</button>
+            <button onClick={() => { setInputMode('url'); setResults(null); setError(''); setBatchResults([]); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'url' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.Globe /> URL-ით</button>
+            <button onClick={() => { setInputMode('html'); setResults(null); setError(''); setBatchResults([]); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'html' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.Code /> HTML ჩასმა</button>
+            <button onClick={() => { setInputMode('batch'); setResults(null); setError(''); }} className={`px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 ${inputMode === 'batch' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}><Icons.List /> რამდენიმე URL</button>
           </div>
 
           {inputMode === 'url' ? (
@@ -246,7 +300,7 @@ export default function SEOChecker() {
               </div>
               <p className="text-sm text-gray-500 mt-3">💡 თუ საიტი დაცულია Cloudflare-ით, გამოიყენეთ &quot;HTML ჩასმა&quot; რეჟიმი</p>
             </div>
-          ) : (
+          ) : inputMode === 'html' ? (
             <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
               <div className="flex gap-3 mb-3">
                 <div className="flex-1 relative">
@@ -259,6 +313,73 @@ export default function SEOChecker() {
                 <span className="text-sm text-gray-500">{htmlInput ? `${htmlInput.length.toLocaleString()} სიმბოლო` : ''}</span>
                 <button onClick={handleAnalyze} disabled={loading || !htmlInput} className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">{loading ? <Icons.Loader /> : <Icons.Search />} ანალიზი</button>
               </div>
+            </div>
+          ) : (
+            <div>
+              <textarea
+                value={batchUrls}
+                onChange={(e) => setBatchUrls(e.target.value)}
+                placeholder={`შეიყვანეთ URL-ები (თითო ხაზზე, მაქს. 10):\n\nhttps://example.com/page1\nhttps://example.com/page2\nhttps://example.com/page3`}
+                className="w-full h-40 px-4 py-3 border-2 border-gray-200 rounded-xl font-mono text-sm resize-none focus:border-emerald-500 outline-none"
+              />
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-sm text-gray-500">
+                  {batchUrls.split('\n').filter(u => u.trim()).length} URL
+                  {batchProgress.total > 0 && ` | მიმდინარე: ${batchProgress.current}/${batchProgress.total}`}
+                </span>
+                <button
+                  onClick={handleBatchAnalyze}
+                  disabled={batchProgress.current > 0 && batchProgress.current < batchProgress.total}
+                  className="px-8 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {batchProgress.current > 0 && batchProgress.current < batchProgress.total ? <Icons.Loader /> : <Icons.Search />}
+                  ანალიზი ({batchUrls.split('\n').filter(u => u.trim() && u.startsWith('http')).length})
+                </button>
+              </div>
+
+              {/* Batch Results Table */}
+              {batchResults.length > 0 && (
+                <div className="mt-6 border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">URL</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-700 w-24">ქულა</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-700 w-24">პრობლემა</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-700 w-24">სტატუსი</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {batchResults.map((r, i) => (
+                        <tr key={i} className={`hover:bg-gray-50 ${r.status === 'done' ? 'cursor-pointer' : ''}`} onClick={() => r.result && selectBatchResult(r.result)}>
+                          <td className="px-4 py-3 truncate max-w-xs">{r.url}</td>
+                          <td className="px-4 py-3 text-center">
+                            {r.status === 'done' && (
+                              <span className={`font-bold ${r.score >= 70 ? 'text-green-600' : r.score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{r.score}</span>
+                            )}
+                            {r.status === 'loading' && <Icons.Loader />}
+                            {r.status === 'pending' && <span className="text-gray-400">—</span>}
+                            {r.status === 'error' && <span className="text-red-600">✗</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {r.status === 'done' && <span className={`${r.issues > 5 ? 'text-red-600' : r.issues > 0 ? 'text-yellow-600' : 'text-green-600'}`}>{r.issues}</span>}
+                            {r.status !== 'done' && <span className="text-gray-400">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {r.status === 'done' && <span className="text-green-600">✓</span>}
+                            {r.status === 'loading' && <span className="text-blue-600">...</span>}
+                            {r.status === 'pending' && <span className="text-gray-400">⏳</span>}
+                            {r.status === 'error' && <span className="text-red-600 text-xs" title={r.error}>შეცდომა</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="px-4 py-2 bg-gray-50 text-xs text-gray-500">
+                    დააწკაპუნეთ URL-ზე დეტალების სანახავად
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -865,8 +986,53 @@ export default function SEOChecker() {
                   <CheckBadge ok={results.technical.appleTouchIcon} label="Apple Icon" />
                   <CheckBadge ok={results.technical.manifestJson || false} label="Manifest" />
                   <CheckBadge ok={!!results.technical.canonical.href} label="Canonical" />
+                  <CheckBadge ok={results.technical.robotsTxt?.found || false} label="robots.txt" />
                 </div>
               </div>
+
+              {/* Robots.txt Content */}
+              {results.technical.robotsTxt?.found && results.technical.robotsTxt.content && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium text-gray-700">robots.txt</div>
+                    <div className="flex gap-2 text-xs">
+                      <span className={`px-2 py-1 rounded ${results.technical.robotsTxt.blocksAll ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {results.technical.robotsTxt.blocksAll ? 'Disallow: /' : 'ღია'}
+                      </span>
+                      <span className={`px-2 py-1 rounded ${results.technical.robotsTxt.hasSitemap ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {results.technical.robotsTxt.hasSitemap ? 'Sitemap: ✓' : 'Sitemap: ✗'}
+                      </span>
+                    </div>
+                  </div>
+                  <pre className="text-xs bg-slate-800 text-slate-100 p-3 rounded overflow-x-auto max-h-40">{results.technical.robotsTxt.content.substring(0, 1000)}</pre>
+                </div>
+              )}
+
+              {/* Sitemap Info */}
+              {results.technical.sitemap?.found && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Sitemap</div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <code className="bg-blue-50 text-blue-700 px-2 py-1 rounded break-all">{results.technical.sitemap.url}</code>
+                    {results.technical.sitemap.urlCount && (
+                      <span className="text-gray-600">{results.technical.sitemap.urlCount} URL</span>
+                    )}
+                    <span className={`px-2 py-1 rounded text-xs ${results.technical.sitemap.pageInSitemap ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {results.technical.sitemap.pageInSitemap ? 'გვერდი sitemap-ში ✓' : 'გვერდი არ არის sitemap-ში'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* llms.txt Content */}
+              {results.technical.llmsTxt?.found && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium text-gray-700 mb-2">llms.txt</div>
+                  {results.technical.llmsTxt.content && (
+                    <pre className="text-xs bg-slate-800 text-slate-100 p-3 rounded overflow-x-auto max-h-32">{results.technical.llmsTxt.content}</pre>
+                  )}
+                </div>
+              )}
             </Section>
 
             {/* DOM Analysis */}

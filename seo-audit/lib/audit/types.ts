@@ -79,6 +79,7 @@ export interface TechnicalData {
   llmsTxt: {
     found: boolean;
     mentioned: boolean;
+    content?: string;
   };
 
   language: string | null;

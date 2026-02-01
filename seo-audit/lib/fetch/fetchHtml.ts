@@ -77,22 +77,39 @@ export async function fetchRobotsTxt(
 
 export async function checkSitemap(
   baseUrl: string
-): Promise<{ found: boolean; url: string | null }> {
-  try {
-    const url = new URL('/sitemap.xml', baseUrl).href;
-    const res = await requestUrl({ url, timeout: 5000 });
+): Promise<{ found: boolean; url: string | null; urlCount?: number }> {
+  // Try multiple sitemap locations
+  const sitemapUrls = [
+    new URL('/sitemap.xml', baseUrl).href,
+    new URL('/sitemap_index.xml', baseUrl).href,
+    new URL('/sitemap/', baseUrl).href,
+    new URL('/sitemaps/sitemap.xml', baseUrl).href,
+  ];
 
-    const found = Boolean(
-      res.status === 200 &&
-      (res.body?.includes('<urlset') ||
-        res.body?.includes('<?xml') ||
-        res.body?.includes('<sitemapindex'))
-    );
+  for (const url of sitemapUrls) {
+    try {
+      const res = await requestUrl({ url, timeout: 8000, readBody: true });
 
-    return { found, url: found ? url : null };
-  } catch {
-    return { found: false, url: null };
+      const found = Boolean(
+        res.status === 200 &&
+        res.body &&
+        (res.body.includes('<urlset') ||
+          res.body.includes('<sitemapindex') ||
+          (res.body.includes('<?xml') && (res.body.includes('<url>') || res.body.includes('<sitemap>'))))
+      );
+
+      if (found && res.body) {
+        // Count URLs in sitemap
+        const urlMatches = res.body.match(/<loc>/g);
+        const urlCount = urlMatches ? urlMatches.length : 0;
+        return { found: true, url, urlCount };
+      }
+    } catch {
+      // Continue to next URL
+    }
   }
+
+  return { found: false, url: null };
 }
 
 // --------------------
@@ -132,24 +149,38 @@ export async function checkRedirect(
 
 export async function checkLlmsTxt(
   baseUrl: string
-): Promise<boolean> {
+): Promise<{ found: boolean; content?: string }> {
   try {
     // Always use root domain - parse URL and construct root
     const parsed = new URL(baseUrl);
     const rootUrl = `${parsed.protocol}//${parsed.host}/llms.txt`;
 
-    const res = await requestUrl({ url: rootUrl, timeout: 8000, readBody: true });
-    // Check for 200 status and text content (not HTML error page)
-    if (res.status === 200 && res.body && res.body.length > 5) {
-      // Make sure it's not an HTML error page
-      const bodyLower = res.body.toLowerCase();
-      if (!bodyLower.includes('<!doctype') && !bodyLower.includes('<html') && !bodyLower.includes('<head')) {
-        return true;
+    // Try with both http and https if needed
+    const urlsToTry = [rootUrl];
+    if (parsed.protocol === 'https:') {
+      urlsToTry.push(`http://${parsed.host}/llms.txt`);
+    }
+
+    for (const url of urlsToTry) {
+      try {
+        const res = await requestUrl({ url, timeout: 10000, readBody: true });
+        // Check for 200 status and text content (not HTML error page)
+        if (res.status === 200 && res.body && res.body.length > 10) {
+          // Make sure it's not an HTML error page
+          const bodyLower = res.body.toLowerCase().trim();
+          const firstChar = bodyLower.charAt(0);
+          // llms.txt should start with text, not HTML
+          if (firstChar !== '<' && !bodyLower.startsWith('<!doctype') && !bodyLower.startsWith('<html')) {
+            return { found: true, content: res.body.substring(0, 500) };
+          }
+        }
+      } catch {
+        continue;
       }
     }
-    return false;
+    return { found: false };
   } catch {
-    return false;
+    return { found: false };
   }
 }
 
@@ -160,22 +191,58 @@ export async function checkLlmsTxt(
 export async function checkUrlInSitemap(
   baseUrl: string,
   targetUrl: string
-): Promise<{ found: boolean; inSitemap: boolean }> {
-  try {
-    const sitemapUrl = new URL('/sitemap.xml', baseUrl).href;
-    const res = await requestUrl({ url: sitemapUrl, timeout: 10000 });
+): Promise<{ found: boolean; inSitemap: boolean; sitemapUrl?: string }> {
+  const sitemapUrls = [
+    new URL('/sitemap.xml', baseUrl).href,
+    new URL('/sitemap_index.xml', baseUrl).href,
+    new URL('/sitemap/', baseUrl).href,
+  ];
 
-    if (res.status !== 200 || !res.body) {
-      return { found: false, inSitemap: false };
+  for (const sitemapUrl of sitemapUrls) {
+    try {
+      const res = await requestUrl({ url: sitemapUrl, timeout: 10000, readBody: true });
+
+      if (res.status !== 200 || !res.body) {
+        continue;
+      }
+
+      // Check if it's a valid sitemap
+      if (!res.body.includes('<urlset') && !res.body.includes('<sitemapindex')) {
+        continue;
+      }
+
+      const normalizedTarget = targetUrl.toLowerCase().replace(/\/$/, '');
+      const inSitemap = res.body.toLowerCase().includes(normalizedTarget);
+
+      if (inSitemap) {
+        return { found: true, inSitemap: true, sitemapUrl };
+      }
+
+      // If it's a sitemap index, check child sitemaps
+      if (res.body.includes('<sitemapindex')) {
+        const locMatches = res.body.match(/<loc>([^<]+)<\/loc>/g);
+        if (locMatches) {
+          for (const locMatch of locMatches.slice(0, 5)) { // Check first 5 child sitemaps
+            const childUrl = locMatch.replace(/<\/?loc>/g, '');
+            try {
+              const childRes = await requestUrl({ url: childUrl, timeout: 8000, readBody: true });
+              if (childRes.status === 200 && childRes.body?.toLowerCase().includes(normalizedTarget)) {
+                return { found: true, inSitemap: true, sitemapUrl: childUrl };
+              }
+            } catch {
+              // Continue to next child
+            }
+          }
+        }
+      }
+
+      return { found: true, inSitemap: false, sitemapUrl };
+    } catch {
+      continue;
     }
-
-    const normalizedTarget = targetUrl.toLowerCase().replace(/\/$/, '');
-    const inSitemap = res.body.toLowerCase().includes(normalizedTarget);
-
-    return { found: true, inSitemap };
-  } catch {
-    return { found: false, inSitemap: false };
   }
+
+  return { found: false, inSitemap: false };
 }
 
 // --------------------
