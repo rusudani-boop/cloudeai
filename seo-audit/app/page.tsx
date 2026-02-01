@@ -234,19 +234,104 @@ export default function SEOChecker() {
     }
   }, []);
 
-  const exportData = (format: 'json' | 'csv') => {
+  const exportData = (format: 'json' | 'csv' | 'pdf') => {
     if (!results) return;
     if (format === 'json') {
       const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = `seo-audit-${new Date().toISOString().split('T')[0]}.json`; a.click();
-    } else {
+    } else if (format === 'csv') {
       const rows = [['Category', 'Issue', 'Severity', 'Location', 'Fix']];
       results.issues.forEach(i => rows.push([i.category, i.issue, i.severity, i.location, i.fix]));
       const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
       const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = `seo-audit-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    } else if (format === 'pdf') {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      const severityColors: Record<string, string> = { critical: '#dc2626', high: '#ea580c', medium: '#ca8a04', low: '#2563eb' };
+      const scoreColor = results.score >= 90 ? '#10b981' : results.score >= 70 ? '#f59e0b' : results.score >= 50 ? '#f97316' : '#ef4444';
+
+      const issuesHtml = results.issues.map(issue => `
+        <div style="padding: 12px; margin: 8px 0; border-left: 4px solid ${severityColors[issue.severity] || '#6b7280'}; background: #f9fafb; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>${issue.issue}</strong>
+            <span style="background: ${severityColors[issue.severity]}20; color: ${severityColors[issue.severity]}; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${issue.severity.toUpperCase()}</span>
+          </div>
+          <div style="font-size: 12px; color: #6b7280; margin-top: 4px;"><code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">${issue.location}</code></div>
+          <div style="font-size: 13px; color: #374151; margin-top: 8px;"><strong>Fix:</strong> ${issue.fix}</div>
+        </div>
+      `).join('');
+
+      const passedHtml = results.passed.map(p => `<div style="padding: 8px 12px; background: #dcfce7; border-radius: 4px; margin: 4px 0; color: #166534;">✓ ${p}</div>`).join('');
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>SEO Audit Report - ${results.url}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1f2937; }
+            h1 { color: #059669; margin-bottom: 0; }
+            h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 32px; }
+            .score-box { text-align: center; padding: 30px; background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border-radius: 16px; margin: 24px 0; }
+            .score { font-size: 72px; font-weight: 800; color: ${scoreColor}; }
+            .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
+            .summary-item { text-align: center; padding: 16px; background: #f9fafb; border-radius: 8px; }
+            .summary-value { font-size: 28px; font-weight: 700; }
+            .summary-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+            .tech-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .tech-item { padding: 12px; background: #f9fafb; border-radius: 6px; }
+            .tech-label { font-size: 12px; color: #6b7280; }
+            .tech-value { font-weight: 600; margin-top: 2px; word-break: break-all; }
+            @media print { body { padding: 20px; } }
+          </style>
+        </head>
+        <body>
+          <h1>SEO Audit Report</h1>
+          <p style="color: #6b7280; margin-top: 4px;">Generated: ${new Date().toLocaleString()} | URL: <a href="${results.url}">${results.url}</a></p>
+
+          <div class="score-box">
+            <div class="score">${results.score}</div>
+            <div style="color: #6b7280;">Overall SEO Score</div>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-item"><div class="summary-value" style="color: #dc2626;">${results.summary.criticalIssues}</div><div class="summary-label">Critical</div></div>
+            <div class="summary-item"><div class="summary-value" style="color: #ea580c;">${results.summary.highIssues}</div><div class="summary-label">High</div></div>
+            <div class="summary-item"><div class="summary-value" style="color: #ca8a04;">${results.summary.mediumIssues}</div><div class="summary-label">Medium</div></div>
+            <div class="summary-item"><div class="summary-value" style="color: #2563eb;">${results.summary.lowIssues}</div><div class="summary-label">Low</div></div>
+          </div>
+
+          <h2>Technical Overview</h2>
+          <div class="tech-grid">
+            <div class="tech-item"><div class="tech-label">Title</div><div class="tech-value">${results.technical.title.value || 'Not found'} (${results.technical.title.length} chars)</div></div>
+            <div class="tech-item"><div class="tech-label">Meta Description</div><div class="tech-value">${results.technical.metaDesc.value?.substring(0, 100) || 'Not found'}${results.technical.metaDesc.value && results.technical.metaDesc.value.length > 100 ? '...' : ''} (${results.technical.metaDesc.length} chars)</div></div>
+            <div class="tech-item"><div class="tech-label">Canonical</div><div class="tech-value">${results.technical.canonical.href || 'Not set'}</div></div>
+            <div class="tech-item"><div class="tech-label">Language</div><div class="tech-value">${results.technical.language || 'Not set'}</div></div>
+            <div class="tech-item"><div class="tech-label">Word Count</div><div class="tech-value">${results.content.wordCount}</div></div>
+            <div class="tech-item"><div class="tech-label">Links</div><div class="tech-value">${results.links.internal} internal, ${results.links.external} external</div></div>
+            <div class="tech-item"><div class="tech-label">Images</div><div class="tech-value">${results.images.total} (${results.images.withoutAlt} without alt)</div></div>
+            <div class="tech-item"><div class="tech-label">Schema Types</div><div class="tech-value">${results.schema.types.join(', ') || 'None'}</div></div>
+          </div>
+
+          <h2>Issues Found (${results.issues.length})</h2>
+          ${issuesHtml || '<p style="color: #6b7280;">No issues found!</p>'}
+
+          <h2>Passed Checks (${results.passed.length})</h2>
+          ${passedHtml || '<p style="color: #6b7280;">No passed checks recorded.</p>'}
+
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px;">
+            Generated by SEO Audit Tool
+          </div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => { printWindow.print(); }, 250);
     }
   };
 
@@ -511,6 +596,7 @@ export default function SEOChecker() {
               <div className="flex gap-2 mt-6">
                 <button onClick={() => exportData('json')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> Export JSON</button>
                 <button onClick={() => exportData('csv')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> Export CSV</button>
+                <button onClick={() => exportData('pdf')} className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg flex items-center gap-2 text-sm"><Icons.Download /> Export PDF</button>
               </div>
             </Section>
 
