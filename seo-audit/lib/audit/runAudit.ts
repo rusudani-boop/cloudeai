@@ -664,9 +664,9 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
           fullUrl = href;
         } else {
           external++;
-          // Collect external URLs for 404 checking
-          if (externalUrls.length < 20) {
-            externalUrls.push({ href, text: text.substring(0, 50) });
+          // Collect external URLs for 404 checking and display
+          if (externalUrls.length < 50) {
+            externalUrls.push({ href, text: text.substring(0, 80) });
           }
         }
       } catch {}
@@ -680,8 +680,8 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
 
     if (isInternal) {
       internal++;
-      if (fullUrl && !href.includes('#') && internalUrls.length < 20) {
-        internalUrls.push({ href: fullUrl, text: text.substring(0, 50) });
+      if (fullUrl && !href.includes('#') && internalUrls.length < 50) {
+        internalUrls.push({ href: fullUrl, text: text.substring(0, 80) });
       }
     }
 
@@ -697,8 +697,8 @@ function analyzeLinks(doc: Document, sourceUrl: string) {
     genericAnchors, genericAnchorsList: genericAnchorsList.slice(0, 10),
     nofollow, sponsored, ugc, unsafeExternalCount,
     hasFooterLinks: !!doc.querySelector('footer a'), hasNavLinks: !!doc.querySelector('nav a'),
-    internalUrls: internalUrls.slice(0, 15), // For redirect checking
-    externalUrls: externalUrls.slice(0, 20), // For 404 checking
+    internalUrls: internalUrls.slice(0, 50), // For redirect checking and display
+    externalUrls: externalUrls.slice(0, 50), // For 404 checking and display
     redirectLinks: 0, redirectList: [] as { href: string; text: string; status: number; location: string }[],
     brokenExternalLinks: 0, brokenExternalList: [] as { href: string; text: string; status: number; error?: string }[]
   };
