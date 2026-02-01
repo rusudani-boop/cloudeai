@@ -32,7 +32,7 @@ interface AuditResult {
   technical: { title: { value: string; length: number; isOptimal: boolean }; metaDesc: { value: string; length: number; isOptimal: boolean }; canonical: { href: string | null; count: number; isCrossDomain: boolean }; robots: { meta: string | null; hasNoindex: boolean; hasNofollow: boolean }; robotsTxt: { found: boolean; content: string | null; blocksAll: boolean; hasSitemap: boolean }; sitemap: { found: boolean; url: string | null; urlCount?: number; pageInSitemap?: boolean }; llmsTxt: { found: boolean; mentioned: boolean }; language: string | null; charset: string | null; viewport: { content: string | null; isMobileOptimized: boolean }; favicon: boolean; appleTouchIcon: boolean; manifestJson: boolean; themeColor: string | null; };
   international: { hreflangs: HreflangTag[]; hasXDefault: boolean; hasSelfReference: boolean; canonicalInHreflang: boolean; langMatchesHreflang: boolean; issues: string[]; duplicateHreflangs?: string[]; nonCanonicalHreflangs?: string[]; };
   content: { headings: { h1: string[]; h2: string[]; h3: string[]; h4: string[]; h5: string[]; h6: string[] }; wordCount: number; characterCount: number; sentenceCount: number; paragraphCount: number; readingTime: number; titleH1Duplicate: boolean; duplicateParagraphs: number; aiScore: number; aiPhrases: string[]; readability: ReadabilityData; keywordDensity: KeywordDensity[]; detectedLanguage?: string; };
-  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; redirectLinks?: number; redirectList?: { href: string; text: string; status: number; location: string }[]; brokenExternalLinks?: number; brokenExternalList?: { href: string; text: string; status: number; error?: string }[]; };
+  links: { total: number; internal: number; external: number; broken: number; brokenList: { href: string; text: string }[]; genericAnchors: number; genericAnchorsList: { text: string; href: string }[]; nofollow: number; sponsored: number; ugc: number; unsafeExternalCount: number; hasFooterLinks: boolean; hasNavLinks: boolean; internalUrls?: { href: string; text: string }[]; externalUrls?: { href: string; text: string }[]; redirectLinks?: number; redirectList?: { href: string; text: string; status: number; location: string }[]; brokenExternalLinks?: number; brokenExternalList?: { href: string; text: string; status: number; error?: string }[]; };
   images: { total: number; withoutAlt: number; withEmptyAlt: number; withoutDimensions: number; lazyLoaded: number; lazyAboveFold: number; clickableWithoutAlt: number; decorativeCount: number; largeImages: number; modernFormats: number; srcsetCount: number; brokenCount?: number; brokenList?: { src: string; alt: string }[]; withoutAltList?: { src: string; context: string }[]; withoutDimensionsList?: { src: string; alt: string }[]; emptyAltList?: { src: string; context: string }[]; imageSizeAnalysis?: { checked: number; largeCount: number; oldFormatCount: number; largeList: { src: string; size: string; type: string | null }[]; oldFormatList: { src: string; type: string | null }[]; }; };
   schema: { count: number; types: string[]; valid: number; invalid: number; details: SchemaItem[]; missingContext: number; hasWebSiteSearch: boolean; hasBreadcrumb: boolean; hasOrganization: boolean; hasFAQ: boolean; hasHowTo: boolean; };
   social: { og: { title: string | null; description: string | null; image: string | null; url: string | null; type: string | null; siteName: string | null; locale: string | null }; twitter: { card: string | null; site: string | null; creator: string | null; title: string | null; description: string | null; image: string | null }; isComplete: boolean; hasArticleTags: boolean; };
@@ -153,7 +153,7 @@ export default function SEOChecker() {
   const [isDragging, setIsDragging] = useState(false);
 
   // All sections to open by default
-  const allSections = ['overview', 'issues', 'passed', 'technical', 'content', 'security', 'international', 'links', 'images', 'schema', 'social', 'platform', 'accessibility', 'dom', 'performance', 'ai', 'trust', 'mobile', 'external-resources'];
+  const allSections = ['overview', 'issues', 'passed', 'technical', 'content', 'headings-tree', 'all-links', 'international', 'links', 'images', 'schema', 'social', 'platform', 'accessibility', 'dom', 'performance', 'ai', 'trust', 'mobile', 'external-resources'];
 
   const handleAnalyze = async () => {
     setError('');
@@ -312,6 +312,64 @@ export default function SEOChecker() {
                       <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span>შიდა: {results.links.internal}</span></div>
                       <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500" /><span>გარე: {results.links.external}</span></div>
                       <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500" /><span>გატეხილი: {results.links.broken}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* More Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                {/* Images Breakdown */}
+                <div className="p-6 bg-gray-50 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-4">სურათების ანალიზი</h3>
+                  <BarChart data={[
+                    { label: 'სულ', value: results.images.total, color: '#6366f1' },
+                    { label: 'alt-ის გარეშე', value: results.images.withoutAlt, color: '#ef4444' },
+                    { label: 'ზომის გარეშე', value: results.images.withoutDimensions, color: '#f97316' },
+                    { label: 'Lazy Load', value: results.images.lazyLoaded, color: '#10b981' },
+                    { label: 'WebP/AVIF', value: results.images.modernFormats || 0, color: '#06b6d4' },
+                  ]} />
+                </div>
+
+                {/* Content Composition */}
+                <div className="p-6 bg-gray-50 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-4">კონტენტის შემადგენლობა</h3>
+                  <div className="space-y-3">
+                    <HorizontalBar value={results.content.headings.h1.length + results.content.headings.h2.length + results.content.headings.h3.length} max={20} color="#ef4444" label={`სათაურები: ${results.content.headings.h1.length + results.content.headings.h2.length + results.content.headings.h3.length}`} />
+                    <HorizontalBar value={results.content.paragraphCount || 0} max={50} color="#3b82f6" label={`პარაგრაფები: ${results.content.paragraphCount || 0}`} />
+                    <HorizontalBar value={results.links.total} max={100} color="#8b5cf6" label={`ბმულები: ${results.links.total}`} />
+                    <HorizontalBar value={results.images.total} max={50} color="#10b981" label={`სურათები: ${results.images.total}`} />
+                    <HorizontalBar value={results.schema.count} max={10} color="#f59e0b" label={`Schema: ${results.schema.count}`} />
+                  </div>
+                </div>
+
+                {/* SEO Health Indicators */}
+                <div className="p-6 bg-gray-50 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-4">SEO ჯანმრთელობა</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className={`p-3 rounded-lg text-center ${results.technical.title.isOptimal ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                      <div className={`text-lg font-bold ${results.technical.title.isOptimal ? 'text-green-700' : 'text-yellow-700'}`}>{results.technical.title.isOptimal ? '✓' : '⚠'}</div>
+                      <div className="text-xs text-gray-600">Title</div>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${results.technical.metaDesc.isOptimal ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                      <div className={`text-lg font-bold ${results.technical.metaDesc.isOptimal ? 'text-green-700' : 'text-yellow-700'}`}>{results.technical.metaDesc.isOptimal ? '✓' : '⚠'}</div>
+                      <div className="text-xs text-gray-600">Meta Desc</div>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${results.content.headings.h1.length === 1 ? 'bg-green-100' : 'bg-red-100'}`}>
+                      <div className={`text-lg font-bold ${results.content.headings.h1.length === 1 ? 'text-green-700' : 'text-red-700'}`}>{results.content.headings.h1.length === 1 ? '✓' : results.content.headings.h1.length}</div>
+                      <div className="text-xs text-gray-600">H1</div>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${results.security.isHttps ? 'bg-green-100' : 'bg-red-100'}`}>
+                      <div className={`text-lg font-bold ${results.security.isHttps ? 'text-green-700' : 'text-red-700'}`}>{results.security.isHttps ? '✓' : '✗'}</div>
+                      <div className="text-xs text-gray-600">HTTPS</div>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${results.images.withoutAlt === 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                      <div className={`text-lg font-bold ${results.images.withoutAlt === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.images.withoutAlt === 0 ? '✓' : results.images.withoutAlt}</div>
+                      <div className="text-xs text-gray-600">Alt Tags</div>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${results.schema.count > 0 ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                      <div className={`text-lg font-bold ${results.schema.count > 0 ? 'text-green-700' : 'text-yellow-700'}`}>{results.schema.count > 0 ? '✓' : '⚠'}</div>
+                      <div className="text-xs text-gray-600">Schema</div>
                     </div>
                   </div>
                 </div>
@@ -605,19 +663,191 @@ export default function SEOChecker() {
               </div>
             </Section>
 
+            {/* Headings Tree */}
+            <Section title="სათაურების ხე (Heading Tree)" icon={Icons.FileText} id="headings-tree">
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                <div className="space-y-1 font-mono text-sm">
+                  {results.content.headings.h1.map((h, i) => (
+                    <div key={`h1-${i}`} className="flex items-center gap-2">
+                      <span className="text-red-600 font-bold w-8">H1</span>
+                      <span className="text-gray-800">{h}</span>
+                    </div>
+                  ))}
+                  {results.content.headings.h2.map((h, i) => (
+                    <div key={`h2-${i}`} className="flex items-center gap-2 pl-4">
+                      <span className="text-orange-600 font-bold w-8">H2</span>
+                      <span className="text-gray-700">{h}</span>
+                    </div>
+                  ))}
+                  {results.content.headings.h3.map((h, i) => (
+                    <div key={`h3-${i}`} className="flex items-center gap-2 pl-8">
+                      <span className="text-yellow-600 font-bold w-8">H3</span>
+                      <span className="text-gray-600">{h}</span>
+                    </div>
+                  ))}
+                  {results.content.headings.h4.map((h, i) => (
+                    <div key={`h4-${i}`} className="flex items-center gap-2 pl-12">
+                      <span className="text-green-600 font-bold w-8">H4</span>
+                      <span className="text-gray-600">{h}</span>
+                    </div>
+                  ))}
+                  {results.content.headings.h5.map((h, i) => (
+                    <div key={`h5-${i}`} className="flex items-center gap-2 pl-16">
+                      <span className="text-blue-600 font-bold w-8">H5</span>
+                      <span className="text-gray-500">{h}</span>
+                    </div>
+                  ))}
+                  {results.content.headings.h6.map((h, i) => (
+                    <div key={`h6-${i}`} className="flex items-center gap-2 pl-20">
+                      <span className="text-purple-600 font-bold w-8">H6</span>
+                      <span className="text-gray-500">{h}</span>
+                    </div>
+                  ))}
+                  {results.content.headings.h1.length === 0 && results.content.headings.h2.length === 0 && (
+                    <div className="text-gray-400 italic">სათაურები არ მოიძებნა</div>
+                  )}
+                </div>
+              </div>
+            </Section>
+
+            {/* All Links - Grouped */}
+            <Section title="ყველა ბმული (დაჯგუფებული)" icon={Icons.Link} id="all-links" badge={<span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-sm">{results.links.total} ბმული</span>}>
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Internal Links */}
+                <div className="p-4 bg-green-50 rounded-xl">
+                  <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                    შიდა ბმულები ({results.links.internal})
+                  </h4>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {results.links.internalUrls && results.links.internalUrls.length > 0 ? (
+                      results.links.internalUrls.slice(0, 30).map((link: {href: string; text: string}, i: number) => (
+                        <div key={i} className="p-2 bg-white rounded text-sm">
+                          <div className="text-green-700 font-medium truncate">{link.text || '(ანკორი არ აქვს)'}</div>
+                          <code className="text-xs text-gray-500 break-all">{link.href}</code>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-500 text-sm italic">შიდა ბმულები არ მოიძებნა</div>
+                    )}
+                    {results.links.internalUrls && results.links.internalUrls.length > 30 && (
+                      <div className="text-green-600 text-sm">... და კიდევ {results.links.internalUrls.length - 30} ბმული</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* External Links */}
+                <div className="p-4 bg-purple-50 rounded-xl">
+                  <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                    გარე ბმულები ({results.links.external})
+                  </h4>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {results.links.externalUrls && results.links.externalUrls.length > 0 ? (
+                      results.links.externalUrls.slice(0, 30).map((link: {href: string; text: string}, i: number) => (
+                        <div key={i} className="p-2 bg-white rounded text-sm">
+                          <div className="text-purple-700 font-medium truncate">{link.text || '(ანკორი არ აქვს)'}</div>
+                          <code className="text-xs text-gray-500 break-all">{link.href}</code>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-500 text-sm italic">გარე ბმულები არ მოიძებნა</div>
+                    )}
+                    {results.links.externalUrls && results.links.externalUrls.length > 30 && (
+                      <div className="text-purple-600 text-sm">... და კიდევ {results.links.externalUrls.length - 30} ბმული</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Redirect Links */}
+                {results.links.redirectList && results.links.redirectList.length > 0 && (
+                  <div className="p-4 bg-yellow-50 rounded-xl">
+                    <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      გადამისამართებული ({results.links.redirectLinks || 0})
+                    </h4>
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {results.links.redirectList.map((link: {href: string; text: string; status: number; location: string}, i: number) => (
+                        <div key={i} className="p-2 bg-white rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-yellow-600 font-medium">HTTP {link.status}</span>
+                            <span className="text-gray-700">{link.text || '(ანკორი არ აქვს)'}</span>
+                          </div>
+                          <code className="text-xs text-gray-500 break-all">{link.href}</code>
+                          <div className="text-xs text-green-600 mt-1">→ {link.location}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Broken External Links */}
+                {results.links.brokenExternalList && results.links.brokenExternalList.length > 0 && (
+                  <div className="p-4 bg-red-50 rounded-xl">
+                    <h4 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      გატეხილი გარე ბმულები ({results.links.brokenExternalLinks || 0})
+                    </h4>
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {results.links.brokenExternalList.map((link: {href: string; text: string; status: number; error?: string}, i: number) => (
+                        <div key={i} className="p-2 bg-white rounded text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-600 font-medium">{link.status ? `HTTP ${link.status}` : link.error}</span>
+                            <span className="text-gray-700 truncate">{link.text || '(ანკორი არ აქვს)'}</span>
+                          </div>
+                          <code className="text-xs text-gray-500 break-all">{link.href}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Links Distribution Visualization */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-medium text-gray-700 mb-4">ბმულების განაწილება</h4>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="h-6 rounded-full overflow-hidden flex">
+                      <div className="bg-green-500 transition-all" style={{width: `${results.links.total > 0 ? (results.links.internal / results.links.total) * 100 : 0}%`}}></div>
+                      <div className="bg-purple-500 transition-all" style={{width: `${results.links.total > 0 ? (results.links.external / results.links.total) * 100 : 0}%`}}></div>
+                      <div className="bg-red-500 transition-all" style={{width: `${results.links.total > 0 ? (results.links.broken / results.links.total) * 100 : 0}%`}}></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-6 mt-3 text-sm">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div><span>შიდა: {results.links.internal} ({results.links.total > 0 ? Math.round((results.links.internal / results.links.total) * 100) : 0}%)</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500"></div><span>გარე: {results.links.external} ({results.links.total > 0 ? Math.round((results.links.external / results.links.total) * 100) : 0}%)</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span>გატეხილი: {results.links.broken}</span></div>
+                </div>
+              </div>
+            </Section>
+
             {/* Technical */}
             <Section title="ტექნიკური დეტალები" icon={Icons.Shield} id="technical">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 gap-4 mt-4">
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-500 mb-1">სათაური (Title)</div>
-                  <div className="font-medium text-sm">{results.technical.title.value || '—'}</div>
-                  <HorizontalBar value={results.technical.title.length} max={70} color={results.technical.title.isOptimal ? '#10b981' : '#f59e0b'} label={`${results.technical.title.length}/60 სიმბოლო`} />
+                  <div className="text-sm text-gray-500 mb-1">სათაური (Title) - {results.technical.title.length} სიმბოლო</div>
+                  <div className={`font-medium text-sm p-2 rounded border ${results.technical.title.isOptimal ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                    {results.technical.title.value || '(არ არის)'}
+                  </div>
+                  <HorizontalBar value={results.technical.title.length} max={70} color={results.technical.title.isOptimal ? '#10b981' : '#f59e0b'} label={`${results.technical.title.length}/60 სიმბოლო ${results.technical.title.length > 60 ? '⚠️ გრძელია' : '✓'}`} />
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-500 mb-1">მეტა აღწერა</div>
-                  <div className="font-medium text-sm truncate">{results.technical.metaDesc.value?.substring(0, 80) || '—'}</div>
-                  <HorizontalBar value={results.technical.metaDesc.length} max={170} color={results.technical.metaDesc.isOptimal ? '#10b981' : '#f59e0b'} label={`${results.technical.metaDesc.length}/160 სიმბოლო`} />
+                  <div className="text-sm text-gray-500 mb-1">მეტა აღწერა - {results.technical.metaDesc.length} სიმბოლო</div>
+                  <div className={`font-medium text-sm p-2 rounded border ${results.technical.metaDesc.isOptimal ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                    {results.technical.metaDesc.value || '(არ არის)'}
+                  </div>
+                  <HorizontalBar value={results.technical.metaDesc.length} max={170} color={results.technical.metaDesc.isOptimal ? '#10b981' : '#f59e0b'} label={`${results.technical.metaDesc.length}/160 სიმბოლო ${results.technical.metaDesc.length > 160 ? '⚠️ გრძელია' : results.technical.metaDesc.length === 0 ? '⚠️ აკლია' : '✓'}`} />
                 </div>
+                {results.technical.canonical.href && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-500 mb-1">Canonical URL</div>
+                    <code className="font-medium text-sm p-2 rounded border bg-blue-50 border-blue-200 block break-all">
+                      {results.technical.canonical.href}
+                    </code>
+                  </div>
+                )}
               </div>
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <div className="text-sm font-medium text-gray-700 mb-3">ტექნიკური შემოწმებები</div>
@@ -851,60 +1081,6 @@ export default function SEOChecker() {
                   <div className="text-sm text-gray-500">HTML ზომა</div>
                 </div>
               </div>
-            </Section>
-
-            {/* Security */}
-            <Section title="უსაფრთხოება" icon={Icons.Lock} id="security">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                <div className={`text-center p-4 rounded-lg ${results.security.isHttps ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <div className={`text-2xl font-bold ${results.security.isHttps ? 'text-green-700' : 'text-red-700'}`}>{results.security.isHttps ? '✓' : '✗'}</div>
-                  <div className="text-sm text-gray-600">HTTPS</div>
-                </div>
-                <div className={`text-center p-4 rounded-lg ${results.security.mixedContentCount === 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <div className={`text-2xl font-bold ${results.security.mixedContentCount === 0 ? 'text-green-700' : 'text-red-700'}`}>{results.security.mixedContentCount}</div>
-                  <div className="text-sm text-gray-600">Mixed Content</div>
-                </div>
-                <div className={`text-center p-4 rounded-lg ${results.links.unsafeExternalCount === 0 ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                  <div className={`text-2xl font-bold ${results.links.unsafeExternalCount === 0 ? 'text-green-700' : 'text-yellow-700'}`}>{results.links.unsafeExternalCount}</div>
-                  <div className="text-sm text-gray-600">Unsafe Links</div>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-700">{results.security.protocolRelativeCount}</div>
-                  <div className="text-sm text-gray-600">Protocol-relative</div>
-                </div>
-              </div>
-
-              {/* SSL Certificate Info */}
-              {results.security.ssl && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-700 mb-3">SSL სერტიფიკატი</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <CheckBadge ok={results.security.ssl.valid} label={results.security.ssl.valid ? 'ვალიდურია' : 'პრობლემა'} />
-                    {results.security.ssl.issuer && <div className="text-sm text-gray-600">გამცემი: {results.security.ssl.issuer}</div>}
-                    {results.security.ssl.validTo && <div className="text-sm text-gray-600">იწურება: {results.security.ssl.validTo}</div>}
-                    {results.security.ssl.daysUntilExpiry !== undefined && (
-                      <div className={`text-sm ${results.security.ssl.daysUntilExpiry < 30 ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                        {results.security.ssl.daysUntilExpiry} დღე დარჩა
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Security Headers */}
-              {results.security.securityHeaders && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-700 mb-3">უსაფრთხოების ჰედერები (ქულა: {results.security.securityHeaders.score}/100)</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                    <CheckBadge ok={!!results.security.securityHeaders.headers['strict-transport-security']} label="HSTS" />
-                    <CheckBadge ok={!!results.security.securityHeaders.headers['content-security-policy']} label="CSP" />
-                    <CheckBadge ok={!!results.security.securityHeaders.headers['x-frame-options']} label="X-Frame-Options" />
-                    <CheckBadge ok={!!results.security.securityHeaders.headers['x-content-type-options']} label="X-Content-Type" />
-                    <CheckBadge ok={!!results.security.securityHeaders.headers['referrer-policy']} label="Referrer-Policy" />
-                    <CheckBadge ok={!!results.security.securityHeaders.headers['permissions-policy']} label="Permissions-Policy" />
-                  </div>
-                </div>
-              )}
             </Section>
 
             {/* International / Hreflang */}
