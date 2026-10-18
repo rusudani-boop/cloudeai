@@ -20,12 +20,12 @@ a { color: inherit; text-decoration: none; }
 .langs div { display: flex; justify-content: space-between; margin-bottom: 1mm; }
 .langs span { color: #a9c0bb; }
 
-.main { padding: 11mm 10mm 8mm 9mm; font-size: 9pt; line-height: 1.5; }
+.main { padding: 10mm 10mm 7mm 9mm; font-size: 8.6pt; line-height: 1.45; }
 h1 { font-family: "Noto Serif Georgian", Georgia, serif; font-size: 25pt; line-height: 1.05; margin: 0; color: #0f4743; }
 .title { margin: 2mm 0 0; font-weight: 800; font-size: 9.6pt; letter-spacing: .06em; text-transform: uppercase; color: #b07a12; }
 .summary { margin: 3.5mm 0 0; color: #3e5552; text-align: left; }
 h2 { font-size: 10pt; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #0f4743; margin: 5mm 0 3mm; padding-bottom: 1.4mm; border-bottom: 1.5px solid #e3a93b; }
-.job { margin-bottom: 4mm; padding-left: 4mm; border-left: 1.5px solid #e3e6dc; position: relative; }
+.job { margin-bottom: 3mm; padding-left: 4mm; border-left: 1.5px solid #e3e6dc; position: relative; }
 .job::before { content: ""; position: absolute; left: -1.6mm; top: 1.2mm; width: 2.2mm; height: 2.2mm; border-radius: 50%; background: #fff; border: 1.5px solid #e3a93b; }
 .jh { display: flex; justify-content: space-between; align-items: baseline; gap: 3mm; }
 .jh b { font-size: 10.2pt; color: #12302d; }
@@ -38,5 +38,5 @@ h2 { font-size: 10pt; font-weight: 800; letter-spacing: .08em; text-transform: u
 .clients { margin: 1.2mm 0 0; font-size: 7.6pt; color: #4f6460; }
 .clients span { font-weight: 700; color: #12302d; }
 
-.page.en .main { font-size: 9.4pt; }
-.page.en .summary { font-size: 9.6pt; }
+.page.en .main { font-size: 9pt; }
+.page.en .summary { font-size: 9.2pt; }
