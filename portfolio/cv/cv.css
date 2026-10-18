@@ -1,0 +1,42 @@
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #e9ebe4; }
+body { font-family: "Noto Sans Georgian", "Segoe UI", sans-serif; color: #1b2e2c; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+a { color: inherit; text-decoration: none; }
+.page { width: 210mm; height: 297mm; margin: 0 auto; background: #fff; display: grid; grid-template-columns: 66mm 1fr; overflow: hidden; }
+
+.side { background: #0f4743; color: #e9efe9; padding: 9mm 6.5mm 8mm; font-size: 8.2pt; line-height: 1.45; }
+.photo { display: block; width: 36mm; height: 40mm; object-fit: cover; object-position: 50% 30%; border-radius: 18mm 18mm 3mm 3mm; border: 2px solid #e3a93b; margin: 0 auto 4mm; }
+.side h3 { font-size: 8.4pt; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #e3a93b; margin: 4.5mm 0 2mm; padding-bottom: 1.2mm; border-bottom: 1px solid #ffffff26; }
+.side ul { list-style: none; margin: 0; padding: 0; }
+.contact li { margin-bottom: 1.6mm; overflow-wrap: anywhere; }
+.contact span { display: block; font-size: 6.8pt; color: #a9c0bb; text-transform: uppercase; letter-spacing: .06em; }
+.contact a { font-weight: 600; }
+.dots li { position: relative; padding-left: 3.4mm; margin-bottom: 1mm; }
+.dots li::before { content: ""; position: absolute; left: 0; top: 1.6mm; width: 1.5mm; height: 1.5mm; border-radius: 50%; background: #e3a93b; }
+.edu { margin-bottom: 1.8mm; }
+.edu b { display: block; font-weight: 700; }
+.edu span { font-size: 7.4pt; color: #a9c0bb; }
+.langs div { display: flex; justify-content: space-between; margin-bottom: 1mm; }
+.langs span { color: #a9c0bb; }
+
+.main { padding: 11mm 10mm 8mm 9mm; font-size: 9pt; line-height: 1.5; }
+h1 { font-family: "Noto Serif Georgian", Georgia, serif; font-size: 25pt; line-height: 1.05; margin: 0; color: #0f4743; }
+.title { margin: 2mm 0 0; font-weight: 800; font-size: 9.6pt; letter-spacing: .06em; text-transform: uppercase; color: #b07a12; }
+.summary { margin: 3.5mm 0 0; color: #3e5552; text-align: left; }
+h2 { font-size: 10pt; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #0f4743; margin: 5mm 0 3mm; padding-bottom: 1.4mm; border-bottom: 1.5px solid #e3a93b; }
+.job { margin-bottom: 4mm; padding-left: 4mm; border-left: 1.5px solid #e3e6dc; position: relative; }
+.job::before { content: ""; position: absolute; left: -1.6mm; top: 1.2mm; width: 2.2mm; height: 2.2mm; border-radius: 50%; background: #fff; border: 1.5px solid #e3a93b; }
+.jh { display: flex; justify-content: space-between; align-items: baseline; gap: 3mm; }
+.jh b { font-size: 10.2pt; color: #12302d; }
+.when { font-size: 7.6pt; color: #6b7f7b; white-space: nowrap; }
+.role { font-weight: 700; color: #b07a12; font-size: 8.6pt; margin: .4mm 0 1mm; }
+.job ul { margin: 0; padding-left: 3.6mm; }
+.job li { margin-bottom: .6mm; }
+.job li::marker { color: #e3a93b; }
+.job a { color: #0f6b63; font-weight: 700; border-bottom: 1px solid #e3a93b; }
+.clients { margin: 1.2mm 0 0; font-size: 7.6pt; color: #4f6460; }
+.clients span { font-weight: 700; color: #12302d; }
+
+.page.en .main { font-size: 9.4pt; }
+.page.en .summary { font-size: 9.6pt; }
