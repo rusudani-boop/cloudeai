@@ -189,12 +189,9 @@ section.block { padding-block: 84px 0; }
 
 /* contact */
 .contact { margin-top: 96px; background: var(--pine); color: var(--on-pine); }
-.contact .wrap { padding-block: 72px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: start; }
-.contact h2 { font-family: var(--display); font-size: clamp(32px, 4.4vw, 52px); line-height: 1.1; margin: 0 0 16px; text-wrap: balance; }
-.contact h2 em { font-style: normal; color: var(--gold); }
-.contact p { color: var(--on-pine-soft); margin: 0; max-width: 32em; }
-.roles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
-.roles > span { border: 1px solid #ffffff33; border-radius: 999px; padding: 6px 14px; font-size: 14px; }
+.contact .wrap { padding-block: 56px; }
+.contact .lines { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .contact .lines { grid-template-columns: 1fr; } }
 .lines { display: grid; gap: 10px; }
 .line { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 18px; background: #ffffff0d; border: 1px solid #ffffff1c; border-radius: 14px; }
 .line .k { font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--on-pine-soft); }
@@ -203,7 +200,7 @@ section.block { padding-block: 84px 0; }
 .line .v a:hover { text-decoration: underline; text-decoration-color: var(--gold); }
 .copy { background: none; border: 1px solid #ffffff33; color: var(--on-pine); border-radius: 8px; font: 600 12px var(--body); padding: 5px 10px; cursor: pointer; }
 .copy:hover { border-color: var(--gold); color: var(--gold); }
-@media (max-width: 860px) { .contact .wrap { grid-template-columns: 1fr; padding-block: 52px; } }
+@media (max-width: 860px) { .contact .wrap { padding-block: 44px; } }
 @media (max-width: 460px) { .line { grid-template-columns: minmax(0, 1fr) auto; } .line .k { grid-column: 1 / -1; } }
 footer { background: var(--pine-deep); color: var(--on-pine-soft); font-size: 13px; }
 footer .wrap { padding-block: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
@@ -456,15 +453,6 @@ footer .wrap { padding-block: 20px; display: flex; flex-wrap: wrap; justify-cont
 
 <section class="contact" id="contact">
   <div class="wrap">
-    <div>
-      <h2><span class="ka">მოდი, <em>ერთად</em> ავაშენოთ თქვენი ბრენდი.</span><span class="en">Let's build your brand <em>together</em>.</span></h2>
-      <p><span class="ka">ვეძებ პოზიციას გუნდში, სადაც მარკეტინგს სერიოზულად აკეთებენ.</span><span class="en">I'm looking for a role on a team that takes marketing seriously.</span></p>
-      <div class="roles">
-        <span><span class="ka">სოციალური მედიის მენეჯერი</span><span class="en">Social Media Manager</span></span>
-        <span><span class="ka">მარკეტინგის მენეჯერი</span><span class="en">Marketing Manager</span></span>
-        <span><span class="ka">მარკეტინგის დირექტორის ასისტენტი</span><span class="en">Assistant to Marketing Director</span></span>
-      </div>
-    </div>
     <div class="lines">
       <div class="line"><span class="k"><span class="ka">ტელეფონი</span><span class="en">Phone</span></span><span class="v"><a href="tel:+995574599036">+995 574 599 036</a></span><button class="copy" type="button" data-copy="+995574599036"><span class="ka">კოპირება</span><span class="en">Copy</span></button></div>
       <div class="line"><span class="k">WhatsApp</span><span class="v"><a href="https://wa.me/995574599036" target="_blank" rel="noopener">wa.me/995574599036</a></span><button class="copy" type="button" data-copy="+995574599036"><span class="ka">კოპირება</span><span class="en">Copy</span></button></div>
