@@ -191,6 +191,8 @@ section.block { padding-block: 84px 0; }
 .contact { margin-top: 96px; background: var(--pine); color: var(--on-pine); }
 .contact .wrap { padding-block: 56px; }
 .contact .lines { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.contact h2 { font-family: var(--display); font-size: clamp(30px, 4.4vw, 50px); line-height: 1.1; margin: 0 0 32px; text-wrap: balance; }
+.contact h2 em { font-style: normal; color: var(--gold); }
 @media (max-width: 760px) { .contact .lines { grid-template-columns: 1fr; } }
 .lines { display: grid; gap: 10px; }
 .line { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 18px; background: #ffffff0d; border: 1px solid #ffffff1c; border-radius: 14px; }
@@ -465,6 +467,7 @@ footer .wrap { padding-block: 20px; display: flex; flex-wrap: wrap; justify-cont
 
 <section class="contact" id="contact">
   <div class="wrap">
+    <h2><span class="ka">მოდით, <em>ერთად</em> ავაშენოთ თქვენი ბრენდი</span><span class="en">Let's build your brand <em>together</em></span></h2>
     <div class="lines">
       <div class="line"><span class="k"><span class="ka">ტელეფონი</span><span class="en">Phone</span></span><span class="v"><a href="tel:+995574599036">+995 574 599 036</a></span><button class="copy" type="button" data-copy="+995574599036"><span class="ka">კოპირება</span><span class="en">Copy</span></button></div>
       <div class="line"><span class="k">WhatsApp</span><span class="v"><a href="https://wa.me/995574599036" target="_blank" rel="noopener">wa.me/995574599036</a></span><button class="copy" type="button" data-copy="+995574599036"><span class="ka">კოპირება</span><span class="en">Copy</span></button></div>
