@@ -67,8 +67,8 @@ button[aria-pressed="true"] { background: rgba(17,23,41,.1); }
   </div>
   <div class="chip legend" aria-label="მასალები">
     <span><i class="sw" style="background:#111729"></i>Soft-touch მქრქალი ლამინაცია</span>
-    <span><i class="sw" style="background:linear-gradient(135deg,#FFF3B8,#C99A12)"></i>ოქროს ფოლგა</span>
-    <span><i class="sw" style="background:#F1C744"></i>ძირი: ოქროსფერი</span>
+    <span><i class="sw" style="background:linear-gradient(135deg,#FFF0B3,#C08F2E 50%,#F6DC8C)"></i>ოქროს ფოლგა</span>
+    <span><i class="sw" style="background:linear-gradient(135deg,#FFF0B3,#C08F2E 50%,#F6DC8C)"></i>ძირი: ოქროს მეტალიზებული ქაღალდი</span>
   </div>
 </div>
 
@@ -117,7 +117,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
-scene.environmentIntensity = 0.6;
+scene.environmentIntensity = 0.75;
 
 const camera = new THREE.PerspectiveCamera(30, 1, 10, 5000);
 const controls = new OrbitControls(camera, canvas);
@@ -152,11 +152,11 @@ function tex(name, srgb) {
   t.anisotropy = maxAniso;
   return t;
 }
-function printed(name) {
+function printed(name, env = 0.7, glow = 0.5) {
   const mask = tex(name + '-mask', false);
   return new THREE.MeshStandardMaterial({
     map: tex(name, true), roughnessMap: mask, metalnessMap: mask, roughness: 1, metalness: 1,
-    envMapIntensity: 0.55, shadowSide: THREE.DoubleSide,
+    envMapIntensity: env, emissiveMap: tex(name + '-foil', true), emissive: 0xffffff, emissiveIntensity: glow, shadowSide: THREE.DoubleSide,
   });
 }
 const plain = (color, roughness = 0.75) => new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, shadowSide: THREE.DoubleSide });
@@ -200,17 +200,17 @@ const lid = new THREE.Group();
 const base = new THREE.Group();
 {
   const { L, W, H } = BASE;
-  const longMat = printed('base-side-long'), shortMat = printed('base-side-short');
+  const longMat = printed('base-side-long', 1.6, 0), shortMat = printed('base-side-short', 1.6, 0);
   const front = panel(L, H, longMat); front.position.set(0, H / 2, W / 2);
   const back = panel(L, H, longMat); back.rotation.y = Math.PI; back.position.set(0, H / 2, -W / 2);
   const right = panel(W, H, shortMat); right.rotation.y = Math.PI / 2; right.position.set(L / 2, H / 2, 0);
   const left = panel(W, H, shortMat); left.rotation.y = -Math.PI / 2; left.position.set(-L / 2, H / 2, 0);
-  const bottom = panel(L, W, printed('base-bottom')); bottom.rotation.x = Math.PI / 2; bottom.position.y = 0.2;
+  const bottom = panel(L, W, printed('base-bottom', 1.6, 0)); bottom.rotation.x = Math.PI / 2; bottom.position.y = 0.2;
   const innerMat = plain(0x0c1120, 0.9);
   const inner = new THREE.Mesh(new THREE.BoxGeometry(L - 2 * BOARD, H, W - 2 * BOARD),
     [innerMat, innerMat, new THREE.MeshBasicMaterial({ visible: false }), innerMat, innerMat, innerMat].map((m) => { m.side = THREE.BackSide; return m; }));
   inner.position.y = H / 2 + 0.1; inner.receiveShadow = true;
-  const edge = ring(L, W, BOARD, plain(GOLD, 0.55), true); edge.position.y = H;
+  const edge = ring(L, W, BOARD, new THREE.MeshStandardMaterial({ color: 0xE2B957, metalness: 1, roughness: 0.3, envMapIntensity: 1.6 }), true); edge.position.y = H;
   const card = panel(INSERT.L, INSERT.W, printed('insert-card')); card.rotation.x = -Math.PI / 2; card.position.y = H - 9;
   base.add(front, back, right, left, bottom, inner, edge, card);
 }

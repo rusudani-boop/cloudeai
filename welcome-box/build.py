@@ -52,17 +52,22 @@ FONTS_CSS = (font_face("Brand", os.path.join(HERE, "fonts", "Poppins-ExtraBold.t
 # "art"  = what gets printed
 # "mask" = material map for the 3D viewer: G = roughness, B = metalness (foil)
 MODE = "art"
-MASK_BASE, MASK_FOIL = "#00B400", "#005A8C"
+MASK_BASE, MASK_FOIL = "#00B400", "#0048FF"
 
 
 def ink(color, foil=False):
     if MODE == "art":
-        return color
+        return "url(#goldfoil)" if foil and color == GOLD else color
+    if MODE == "foil":   # foil-only layer: drives the 3D foil shine (emissive map)
+        return "url(#goldfoil)" if foil else "#000000"
     return MASK_FOIL if foil else MASK_BASE
 
 
 def defs():
     return f"""<defs>
+<linearGradient id="goldfoil" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#FFF0B3"/><stop offset=".22" stop-color="#E9C766"/><stop offset=".45" stop-color="#C08F2E"/>
+<stop offset=".62" stop-color="#F6DC8C"/><stop offset=".82" stop-color="#B98428"/><stop offset="1" stop-color="#E7C46A"/></linearGradient>
 <radialGradient id="halo"><stop offset="0" stop-color="{GLOW}" stop-opacity=".95"/>
 <stop offset=".45" stop-color="{GLOW}" stop-opacity=".45"/><stop offset="1" stop-color="{GLOW}" stop-opacity="0"/></radialGradient>
 <radialGradient id="flare"><stop offset="0" stop-color="#FFF8D0"/><stop offset=".3" stop-color="{GOLD_HI}" stop-opacity=".7"/>
@@ -76,7 +81,7 @@ def defs():
 
 def pyramid(cx, top, h):
     """Glowing gold pyramid (brand mark), 3/4 view."""
-    if MODE == "mask":
+    if MODE != "art":
         return ""
     P = lambda u, v: (cx + u * h, top + v * h)
     A, Lf, F, R = P(0, 0), P(-0.55, 0.80), P(0.03, 1.0), P(0.58, 0.79)
@@ -108,9 +113,9 @@ def geo(x, y, size, fill, text, foil=False, anchor="middle", ls="0.04em"):
             f'letter-spacing="{ls}" fill="{ink(fill, foil)}" text-anchor="{anchor}">{text}</text>')
 
 
-def face(w, h, body, bg=NAVY):
+def face(w, h, body, bg=NAVY, bg_foil=False):
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}mm" height="{h:g}mm" viewBox="0 0 {w:g} {h:g}">'
-            f'<style>{FONTS_CSS}</style>{defs()}<rect width="{w}" height="{h}" fill="{ink(bg)}"/>{body}</svg>')
+            f'<style>{FONTS_CSS}</style>{defs()}<rect width="{w}" height="{h}" fill="{ink(bg, bg_foil)}"/>{body}</svg>')
 
 
 # ---- Lid faces -----------------------------------------------------------
@@ -119,7 +124,7 @@ def lid_top(L, W):
     return face(L, W, pyramid(px, 12, 56)
                 + geo(160, 31, 11, WHITE, TAG_1)
                 + geo(160, 50, 15.5, GOLD, TAG_2, foil=True)
-                + f'<line x1="140" y1="58.5" x2="180" y2="58.5" stroke="{ink(GOLD, True)}" stroke-width=".35"/>'
+                + f'<line x1="140" y1="58.5" x2="180" y2="58.5" stroke="{ink('#D9B04F', True)}" stroke-width=".35"/>'
                 + logo(160, 69, 7.2))
 
 
@@ -140,7 +145,7 @@ def lid_end(W, H):
 
 # ---- Base faces (gold reveal when the lid comes off) ---------------------
 def base_side(w, h):
-    return face(w, h, "", bg=GOLD)
+    return face(w, h, "", bg=GOLD, bg_foil=True)
 
 
 def base_bottom(L, W):
@@ -148,7 +153,7 @@ def base_bottom(L, W):
                       f'<text x="{L / 2}" y="{W / 2}" font-family="Brand" font-weight="800" font-size="8" '
                       f'text-anchor="middle" fill="{NAVY}">10xSEO</text>'
                       f'<text x="{L / 2}" y="{W / 2 + 8}" font-family="Brand" font-weight="800" font-size="3.4" '
-                      f'letter-spacing=".14em" text-anchor="middle" fill="{NAVY}">{URL.upper()}</text></g>', bg=GOLD)
+                      f'letter-spacing=".14em" text-anchor="middle" fill="{NAVY}">{URL.upper()}</text></g>', bg=GOLD, bg_foil=True)
 
 
 def insert_card(L, W):
@@ -237,8 +242,8 @@ def write(path, svg):
 def build():
     global MODE
     out = {}
-    for MODE in ("art", "mask"):
-        sfx = "" if MODE == "art" else "-mask"
+    for MODE in ("art", "mask", "foil"):
+        sfx = "" if MODE == "art" else "-" + MODE
         Lw, Lh, Ld = LID["L"], LID["W"], LID["H"]
         Bw, Bh, Bd = BASE["L"], BASE["W"], BASE["H"]
         f = {
@@ -257,7 +262,7 @@ def build():
           sheet(LID, out["lid-top"], out["lid-front"], out["lid-back"], out["lid-end"], NAVY, labels=True))
     write(os.path.join(OUT, "base-dieline.svg"),
           sheet(BASE, out["base-bottom"], out["base-side-long"], out["base-side-long"],
-                out["base-side-short"], GOLD))
+                out["base-side-short"], "#D9B04F"))
     write(os.path.join(OUT, "insert-card.svg"), out["insert-card"])
     print("ok")
 
