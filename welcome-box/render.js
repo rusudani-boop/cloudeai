@@ -8,13 +8,14 @@ const TEX = path.join(OUT, 'tex');
 fs.mkdirSync(TEX, { recursive: true });
 const read = (p) => fs.readFileSync(p, 'utf8');
 const size = (s) => ({ w: parseFloat(s.match(/width="([\d.]+)mm"/)[1]), h: parseFloat(s.match(/height="([\d.]+)mm"/)[1]) });
-const PX_PER_MM = 9;
+const PX_PER_MM = 7;
 
 (async () => {
   const browser = await chromium.launch();
 
   // 1) Print PDFs, 1:1 scale (dielines include 3 mm bleed)
-  for (const name of ['lid-dieline', 'base-dieline', 'insert-card']) {
+  const svgs = fs.readdirSync(OUT).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4));
+  for (const name of svgs.filter((n) => !n.endsWith('-annotated'))) {
     const s = read(path.join(OUT, `${name}.svg`)), { w, h } = size(s);
     const page = await browser.newPage();
     await page.setContent(`<style>@page{size:${w}mm ${h}mm;margin:0}html,body{margin:0}svg{display:block}</style>${s}`);
@@ -32,7 +33,8 @@ const PX_PER_MM = 9;
     await page.screenshot({ path: outPath, type, ...(type === 'jpeg' ? { quality: 90 } : {}) });
     await page.close();
   };
-  await raster(path.join(OUT, 'lid-dieline-annotated.svg'), path.join(OUT, 'lid-dieline-preview.png'), 8, 'png');
+  for (const n of svgs.filter((n) => n.endsWith('-annotated')))
+    await raster(path.join(OUT, `${n}.svg`), path.join(OUT, `${n.replace('-annotated', '')}-preview.png`), 5, 'png');
   for (const f of fs.readdirSync(path.join(OUT, 'faces'))) {
     const mask = f.endsWith('-mask.svg');
     await raster(path.join(OUT, 'faces', f), path.join(TEX, f.replace('.svg', mask ? '.png' : '.jpg')), PX_PER_MM, mask ? 'png' : 'jpeg');

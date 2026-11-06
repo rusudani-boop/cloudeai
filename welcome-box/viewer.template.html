@@ -30,7 +30,10 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 .hud.top { top: 0; padding-block: calc(16px + env(safe-area-inset-top, 0px)) 0; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.hud.bottom { bottom: 0; padding-block: 0 calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: center; }
+.hud.bottom { bottom: 0; padding-block: 0 calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.variants button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; }
+.variants small { font: 500 11px/1 var(--f-geo); color: var(--ink-soft); }
+.variants button[aria-pressed="true"] small { color: var(--ink); }
 .chip {
   pointer-events: auto; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; min-width: 0;
@@ -51,7 +54,7 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 button.primary { background: var(--ink); color: #fff; padding-inline: 18px; }
 button.primary:hover { background: #22305A; }
 button[aria-pressed="true"] { background: rgba(17,23,41,.1); }
-.hint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--ink-soft); pointer-events: none; white-space: nowrap; }
+.hint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--ink-soft); pointer-events: none; white-space: nowrap; }
 [hidden] { display: none !important; }
 #err { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-soft); }
 @media (max-width: 560px) { .legend { display: none; } .hint { display: none; } button { padding: 10px 11px; } }
@@ -63,7 +66,7 @@ button[aria-pressed="true"] { background: rgba(17,23,41,.1); }
 <div class="hud top">
   <div class="chip">
     <div class="brand"><b>10x</b>SEO · Welcome Box</div>
-    <div class="spec">243 × 80 × 39 mm · მყარი მუყაო 2 mm</div>
+    <div class="spec">243 × 239 × 80 mm · AirPods Max-ის ფორმატი</div>
   </div>
   <div class="chip legend" aria-label="მასალები">
     <span><i class="sw" style="background:#111729"></i>Soft-touch მქრქალი ლამინაცია</span>
@@ -75,6 +78,11 @@ button[aria-pressed="true"] { background: rgba(17,23,41,.1); }
 <div class="hint">გადაატრიალე თითით ან მაუსით · ზუმი: სქროლი</div>
 
 <div class="hud bottom">
+  <div class="chip rail variants" role="toolbar" aria-label="დიზაინის ვარიანტი">
+    <button id="var-a" data-v="a" aria-pressed="true">A · პირამიდა<small>ნათებადი პირამიდა ცენტრში</small></button>
+    <button id="var-b" data-v="b" aria-pressed="false">B · ტიპოგრაფია<small>„მზად ხარ იყო პირველი?“</small></button>
+    <button id="var-c" data-v="c" aria-pressed="false">C · მინიმალი<small>მხოლოდ ოქროს ფოლგა</small></button>
+  </div>
   <div class="chip rail" role="toolbar" aria-label="ხედი">
     <button id="open" class="primary">გახსნა</button>
     <button id="v-hero">3/4</button>
@@ -99,9 +107,9 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 const TEX = /*TEXTURES*/{};
 
 // ---- dimensions (mm) ----
-const LID = { L: 243, W: 80, H: 39 }, BOARD = 2;
-const BASE = { L: 238, W: 75, H: 36.8 };
-const INSERT = { L: 232, W: 69 };
+const LID = { L: 243, W: 239, H: 80 }, BOARD = 2;
+const BASE = { L: 238, W: 234, H: 77.8 };
+const INSERT = { L: 230, W: 226 };
 const NAVY = 0x111729, GOLD = 0xF1C744;
 
 const canvas = document.getElementById('stage');
@@ -122,22 +130,22 @@ scene.environmentIntensity = 0.75;
 const camera = new THREE.PerspectiveCamera(30, 1, 10, 5000);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.minDistance = 260; controls.maxDistance = 1100;
+controls.minDistance = 380; controls.maxDistance = 1900;
 controls.maxPolarAngle = Math.PI * 0.49;
-controls.target.set(0, 22, 0);
+controls.target.set(0, 40, 0);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 controls.autoRotate = !reduceMotion;
 controls.autoRotateSpeed = 0.7;
 
 // lights
 const key = new THREE.DirectionalLight(0xffffff, 1.5);
-key.position.set(-260, 520, 300);
+key.position.set(-380, 760, 460);
 key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
-Object.assign(key.shadow.camera, { left: -320, right: 320, top: 320, bottom: -320, near: 50, far: 1400 });
+Object.assign(key.shadow.camera, { left: -520, right: 520, top: 520, bottom: -520, near: 50, far: 2400 });
 key.shadow.radius = 6; key.shadow.bias = -0.0004;
 scene.add(key);
-const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(300, 200, -400); scene.add(rim);
+const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(450, 300, -600); scene.add(rim);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xc9ccd6, 0.25));
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.ShadowMaterial({ opacity: 0.22 }));
@@ -180,10 +188,12 @@ function ring(L, W, t, mat, faceUp) {
 
 // ---- lid (open at the bottom) ----
 const lid = new THREE.Group();
+let lidTop, lidFront;
 {
   const { L, W, H } = LID;
-  const top = panel(L, W, printed('lid-top')); top.rotation.x = -Math.PI / 2; top.position.y = H;
-  const front = panel(L, H, printed('lid-front')); front.position.set(0, H / 2, W / 2);
+  const top = panel(L, W, null); top.rotation.x = -Math.PI / 2; top.position.y = H;
+  const front = panel(L, H, null); front.position.set(0, H / 2, W / 2);
+  lidTop = top; lidFront = front;
   const back = panel(L, H, printed('lid-back')); back.rotation.y = Math.PI; back.position.set(0, H / 2, -W / 2);
   const endMat = printed('lid-end');
   const right = panel(W, H, endMat); right.rotation.y = Math.PI / 2; right.position.set(L / 2, H / 2, 0);
@@ -211,23 +221,36 @@ const base = new THREE.Group();
     [innerMat, innerMat, new THREE.MeshBasicMaterial({ visible: false }), innerMat, innerMat, innerMat].map((m) => { m.side = THREE.BackSide; return m; }));
   inner.position.y = H / 2 + 0.1; inner.receiveShadow = true;
   const edge = ring(L, W, BOARD, new THREE.MeshStandardMaterial({ color: 0xE2B957, metalness: 1, roughness: 0.3, envMapIntensity: 1.6 }), true); edge.position.y = H;
-  const card = panel(INSERT.L, INSERT.W, printed('insert-card')); card.rotation.x = -Math.PI / 2; card.position.y = H - 9;
+  const card = panel(INSERT.L, INSERT.W, printed('insert-card')); card.rotation.x = -Math.PI / 2; card.position.y = H - 12;
   base.add(front, back, right, left, bottom, inner, edge, card);
 }
 scene.add(base, lid);
 
+// ---- design variants (swap the lid's top + front) ----
+const VARIANT_MATS = {};
+for (const v of ['a', 'b', 'c']) VARIANT_MATS[v] = { top: printed(v + '-lid-top'), front: printed(v + '-lid-front') };
+const varBtns = [...document.querySelectorAll('.variants button')];
+function setVariant(v) {
+  if (!VARIANT_MATS[v]) v = 'a';
+  lidTop.material = VARIANT_MATS[v].top; lidFront.material = VARIANT_MATS[v].front;
+  varBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+}
+varBtns.forEach((b) => b.addEventListener('click', () => { setVariant(b.dataset.v); try { history.replaceState(null, '', '#' + b.dataset.v); } catch (e) {} }));
+addEventListener('hashchange', () => setVariant(location.hash.slice(1)));
+setVariant(location.hash.slice(1));
+
 // ---- views ----
 const VIEWS = {
-  hero: [new THREE.Vector3(250, 230, 390), new THREE.Vector3(0, 22, 0)],
-  open: [new THREE.Vector3(170, 330, 420), new THREE.Vector3(0, 30, -40)],
-  top: [new THREE.Vector3(0, 640, 30), new THREE.Vector3(0, 0, 0)],
-  front: [new THREE.Vector3(0, 70, 560), new THREE.Vector3(0, 22, 0)],
-  side: [new THREE.Vector3(520, 150, 120), new THREE.Vector3(0, 22, 0)],
+  hero: [new THREE.Vector3(400, 420, 600), new THREE.Vector3(0, 30, 0)],
+  open: [new THREE.Vector3(430, 800, 960), new THREE.Vector3(0, 70, -170)],
+  top: [new THREE.Vector3(0, 980, 40), new THREE.Vector3(0, 0, 0)],
+  front: [new THREE.Vector3(0, 260, 860), new THREE.Vector3(0, 40, 0)],
+  side: [new THREE.Vector3(820, 260, 160), new THREE.Vector3(0, 40, 0)],
 };
 let flight = null;
 function fly(name) {
   const [pos, tgt] = VIEWS[name];
-  const fit = Math.max(1, 1.25 * (520 / Math.max(innerWidth, 1)));   // pull back on narrow screens
+  const fit = Math.max(1, 1.25 * (620 / Math.max(innerWidth, 1)));   // pull back on narrow screens
   flight = { from: camera.position.clone(), to: tgt.clone().add(pos.clone().sub(tgt).multiplyScalar(fit)),
     tFrom: controls.target.clone(), tTo: tgt.clone(), t: 0, dur: reduceMotion ? 0.01 : 1.1 };
 }
@@ -263,9 +286,9 @@ renderer.setAnimationLoop(() => {
   openT += Math.sign(openTarget - openT) * Math.min(Math.abs(openTarget - openT), dt * speed);
   const e = ease(openT);
   const lift = Math.min(1, e * 1.6), swing = Math.max(0, (e - 0.35) / 0.65);
-  lid.position.y = lift * 45 + swing * 10;
-  lid.position.z = -swing * 120;
-  lid.rotation.x = -swing * 0.1;
+  lid.position.y = lift * 95 + swing * 15;
+  lid.position.z = -swing * 285;
+  lid.rotation.x = -swing * 0.08;
   // camera flights
   if (flight) {
     flight.t = Math.min(1, flight.t + dt / flight.dur);
@@ -277,5 +300,5 @@ renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
 });
-window.__box = { open: () => openBtn.click(), fly, setOpen: (v) => { openTarget = openT = v; } };
+window.__box = { open: () => openBtn.click(), fly, setVariant, setOpen: (v) => { openTarget = openT = v; } };
 </script>
