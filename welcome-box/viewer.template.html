@@ -1,0 +1,281 @@
+<title>10xSEO Welcome Box</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@500;800&family=Poppins:wght@600;800&display=swap">
+<style>
+/* Layout: full-bleed studio canvas, spec chip top-left, control rail bottom-center. Single light studio look on purpose. */
+:root {
+  --studio-top: #F3F4F7;
+  --studio-bottom: #D9DCE3;
+  --ink: #111729;          /* brand navy */
+  --ink-soft: #4A5168;
+  --gold: #F1C744;         /* brand gold */
+  --chip: rgba(255,255,255,.72);
+  --line: rgba(17,23,41,.12);
+  --f-display: "Poppins", "Noto Sans Georgian", system-ui, sans-serif;
+  --f-geo: "Noto Sans Georgian", "Poppins", system-ui, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body {
+  background: radial-gradient(120% 90% at 50% 30%, var(--studio-top) 0%, var(--studio-bottom) 100%);
+  color: var(--ink);
+  font-family: var(--f-geo);
+  overflow: hidden;
+}
+#stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+.hud {
+  position: fixed; left: 0; right: 0; pointer-events: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.hud.top { top: 0; padding-block: calc(16px + env(safe-area-inset-top, 0px)) 0; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.hud.bottom { bottom: 0; padding-block: 0 calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: center; }
+.chip {
+  pointer-events: auto; background: var(--chip); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; min-width: 0;
+}
+.brand { font-family: var(--f-display); font-weight: 800; font-size: 18px; letter-spacing: -.02em; line-height: 1; }
+.brand b { color: #C99A12; font-weight: 800; }
+.spec { margin-top: 6px; font-family: var(--f-display); font-weight: 600; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.legend { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ink-soft); }
+.legend span { display: flex; align-items: center; gap: 8px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; border: 1px solid var(--line); }
+.rail { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 6px; border-radius: 16px; }
+button {
+  font: 600 13px/1 var(--f-geo); color: var(--ink); background: transparent; border: 0; border-radius: 10px;
+  padding: 11px 14px; cursor: pointer; transition: background .15s;
+}
+button:hover { background: rgba(17,23,41,.07); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+button.primary { background: var(--ink); color: #fff; padding-inline: 18px; }
+button.primary:hover { background: #22305A; }
+button[aria-pressed="true"] { background: rgba(17,23,41,.1); }
+.hint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--ink-soft); pointer-events: none; white-space: nowrap; }
+[hidden] { display: none !important; }
+#err { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-soft); }
+@media (max-width: 560px) { .legend { display: none; } .hint { display: none; } button { padding: 10px 11px; } }
+</style>
+
+<canvas id="stage" aria-label="10xSEO welcome box 3D მოდელი"></canvas>
+<div id="err" hidden>3D ვერ ჩაიტვირთა: ბრაუზერს WebGL სჭირდება.</div>
+
+<div class="hud top">
+  <div class="chip">
+    <div class="brand"><b>10x</b>SEO · Welcome Box</div>
+    <div class="spec">243 × 80 × 39 mm · მყარი მუყაო 2 mm</div>
+  </div>
+  <div class="chip legend" aria-label="მასალები">
+    <span><i class="sw" style="background:#111729"></i>Soft-touch მქრქალი ლამინაცია</span>
+    <span><i class="sw" style="background:linear-gradient(135deg,#FFF3B8,#C99A12)"></i>ოქროს ფოლგა</span>
+    <span><i class="sw" style="background:#F1C744"></i>ძირი: ოქროსფერი</span>
+  </div>
+</div>
+
+<div class="hint">გადაატრიალე თითით ან მაუსით · ზუმი: სქროლი</div>
+
+<div class="hud bottom">
+  <div class="chip rail" role="toolbar" aria-label="ხედი">
+    <button id="open" class="primary">გახსნა</button>
+    <button id="v-hero">3/4</button>
+    <button id="v-top">ზემოდან</button>
+    <button id="v-front">წინიდან</button>
+    <button id="v-side">გვერდიდან</button>
+    <button id="spin" aria-pressed="true">ბრუნვა</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const TEX = /*TEXTURES*/{};
+
+// ---- dimensions (mm) ----
+const LID = { L: 243, W: 80, H: 39 }, BOARD = 2;
+const BASE = { L: 238, W: 75, H: 36.8 };
+const INSERT = { L: 232, W: 69 };
+const NAVY = 0x111729, GOLD = 0xF1C744;
+
+const canvas = document.getElementById('stage');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true }); }
+catch (e) { document.getElementById('err').hidden = false; throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+scene.environmentIntensity = 0.6;
+
+const camera = new THREE.PerspectiveCamera(30, 1, 10, 5000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.minDistance = 260; controls.maxDistance = 1100;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.target.set(0, 22, 0);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.autoRotate = !reduceMotion;
+controls.autoRotateSpeed = 0.7;
+
+// lights
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(-260, 520, 300);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -320, right: 320, top: 320, bottom: -320, near: 50, far: 1400 });
+key.shadow.radius = 6; key.shadow.bias = -0.0004;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfd0ff, 0.5); rim.position.set(300, 200, -400); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc9ccd6, 0.25));
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.ShadowMaterial({ opacity: 0.22 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+// ---- materials ----
+const loader = new THREE.TextureLoader();
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+function tex(name, srgb) {
+  const t = loader.load(TEX[name]);
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.anisotropy = maxAniso;
+  return t;
+}
+function printed(name) {
+  const mask = tex(name + '-mask', false);
+  return new THREE.MeshStandardMaterial({
+    map: tex(name, true), roughnessMap: mask, metalnessMap: mask, roughness: 1, metalness: 1,
+    envMapIntensity: 0.55, shadowSide: THREE.DoubleSide,
+  });
+}
+const plain = (color, roughness = 0.75) => new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, shadowSide: THREE.DoubleSide });
+
+function panel(w, h, mat) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+// rectangular ring (board edge) lying in XZ, facing up or down
+function ring(L, W, t, mat, faceUp) {
+  const s = new THREE.Shape();
+  s.moveTo(-L / 2, -W / 2); s.lineTo(L / 2, -W / 2); s.lineTo(L / 2, W / 2); s.lineTo(-L / 2, W / 2); s.closePath();
+  const hole = new THREE.Path();
+  hole.moveTo(-L / 2 + t, -W / 2 + t); hole.lineTo(-L / 2 + t, W / 2 - t); hole.lineTo(L / 2 - t, W / 2 - t); hole.lineTo(L / 2 - t, -W / 2 + t); hole.closePath();
+  s.holes.push(hole);
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(s), mat);
+  m.rotation.x = faceUp ? -Math.PI / 2 : Math.PI / 2;
+  return m;
+}
+
+// ---- lid (open at the bottom) ----
+const lid = new THREE.Group();
+{
+  const { L, W, H } = LID;
+  const top = panel(L, W, printed('lid-top')); top.rotation.x = -Math.PI / 2; top.position.y = H;
+  const front = panel(L, H, printed('lid-front')); front.position.set(0, H / 2, W / 2);
+  const back = panel(L, H, printed('lid-back')); back.rotation.y = Math.PI; back.position.set(0, H / 2, -W / 2);
+  const endMat = printed('lid-end');
+  const right = panel(W, H, endMat); right.rotation.y = Math.PI / 2; right.position.set(L / 2, H / 2, 0);
+  const left = panel(W, H, endMat); left.rotation.y = -Math.PI / 2; left.position.set(-L / 2, H / 2, 0);
+  const innerMat = plain(0x0c1120, 0.9);
+  const inner = new THREE.Mesh(new THREE.BoxGeometry(L - 2 * BOARD, H - BOARD, W - 2 * BOARD),
+    [innerMat, innerMat, innerMat, new THREE.MeshBasicMaterial({ visible: false }), innerMat, innerMat].map((m) => { m.side = THREE.BackSide; return m; }));
+  inner.position.y = (H - BOARD) / 2;
+  const edge = ring(L, W, BOARD, plain(NAVY, 0.6), false); edge.position.y = 0.05;
+  lid.add(top, front, back, right, left, inner, edge);
+}
+
+// ---- base (open at the top, gold) ----
+const base = new THREE.Group();
+{
+  const { L, W, H } = BASE;
+  const longMat = printed('base-side-long'), shortMat = printed('base-side-short');
+  const front = panel(L, H, longMat); front.position.set(0, H / 2, W / 2);
+  const back = panel(L, H, longMat); back.rotation.y = Math.PI; back.position.set(0, H / 2, -W / 2);
+  const right = panel(W, H, shortMat); right.rotation.y = Math.PI / 2; right.position.set(L / 2, H / 2, 0);
+  const left = panel(W, H, shortMat); left.rotation.y = -Math.PI / 2; left.position.set(-L / 2, H / 2, 0);
+  const bottom = panel(L, W, printed('base-bottom')); bottom.rotation.x = Math.PI / 2; bottom.position.y = 0.2;
+  const innerMat = plain(0x0c1120, 0.9);
+  const inner = new THREE.Mesh(new THREE.BoxGeometry(L - 2 * BOARD, H, W - 2 * BOARD),
+    [innerMat, innerMat, new THREE.MeshBasicMaterial({ visible: false }), innerMat, innerMat, innerMat].map((m) => { m.side = THREE.BackSide; return m; }));
+  inner.position.y = H / 2 + 0.1; inner.receiveShadow = true;
+  const edge = ring(L, W, BOARD, plain(GOLD, 0.55), true); edge.position.y = H;
+  const card = panel(INSERT.L, INSERT.W, printed('insert-card')); card.rotation.x = -Math.PI / 2; card.position.y = H - 9;
+  base.add(front, back, right, left, bottom, inner, edge, card);
+}
+scene.add(base, lid);
+
+// ---- views ----
+const VIEWS = {
+  hero: [new THREE.Vector3(250, 230, 390), new THREE.Vector3(0, 22, 0)],
+  open: [new THREE.Vector3(170, 330, 420), new THREE.Vector3(0, 30, -40)],
+  top: [new THREE.Vector3(0, 640, 30), new THREE.Vector3(0, 0, 0)],
+  front: [new THREE.Vector3(0, 70, 560), new THREE.Vector3(0, 22, 0)],
+  side: [new THREE.Vector3(520, 150, 120), new THREE.Vector3(0, 22, 0)],
+};
+let flight = null;
+function fly(name) {
+  const [pos, tgt] = VIEWS[name];
+  const fit = Math.max(1, 1.25 * (520 / Math.max(innerWidth, 1)));   // pull back on narrow screens
+  flight = { from: camera.position.clone(), to: tgt.clone().add(pos.clone().sub(tgt).multiplyScalar(fit)),
+    tFrom: controls.target.clone(), tTo: tgt.clone(), t: 0, dur: reduceMotion ? 0.01 : 1.1 };
+}
+const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+// ---- open / close: slow lift, like a rigid box sliding off on its air cushion ----
+let openTarget = 0, openT = 0;
+const openBtn = document.getElementById('open');
+openBtn.addEventListener('click', () => {
+  openTarget = openTarget ? 0 : 1;
+  openBtn.textContent = openTarget ? 'დახურვა' : 'გახსნა';
+  if (!flight) fly(openTarget ? 'open' : 'hero');
+});
+['hero', 'top', 'front', 'side'].forEach((v) => document.getElementById('v-' + v).addEventListener('click', () => fly(v)));
+const spin = document.getElementById('spin');
+spin.setAttribute('aria-pressed', String(controls.autoRotate));
+spin.addEventListener('click', () => { controls.autoRotate = !controls.autoRotate; spin.setAttribute('aria-pressed', String(controls.autoRotate)); });
+controls.addEventListener('start', () => { flight = null; });
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+fly('hero'); if (flight) { camera.position.copy(flight.to); controls.target.copy(flight.tTo); flight = null; }
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  // lid
+  const speed = reduceMotion ? 10 : 0.55;
+  openT += Math.sign(openTarget - openT) * Math.min(Math.abs(openTarget - openT), dt * speed);
+  const e = ease(openT);
+  const lift = Math.min(1, e * 1.6), swing = Math.max(0, (e - 0.35) / 0.65);
+  lid.position.y = lift * 45 + swing * 10;
+  lid.position.z = -swing * 120;
+  lid.rotation.x = -swing * 0.1;
+  // camera flights
+  if (flight) {
+    flight.t = Math.min(1, flight.t + dt / flight.dur);
+    const k = ease(flight.t);
+    camera.position.lerpVectors(flight.from, flight.to, k);
+    controls.target.lerpVectors(flight.tFrom, flight.tTo, k);
+    if (flight.t >= 1) flight = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+window.__box = { open: () => openBtn.click(), fly, setOpen: (v) => { openTarget = openT = v; } };
+</script>

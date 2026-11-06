@@ -1,60 +1,165 @@
 #!/usr/bin/env python3
-"""10xSEO welcome box — print dielines + mockup generator.
+"""10xSEO welcome box: print dielines + 3D textures.
 
-Box (lid, outer): 243 x 80 x 39 mm  (L x W x H)
+Lid (outer):  243 x 80 x 39 mm (L x W x H)
 Construction: rigid two-piece telescoping box (lid + base), like AirPods Max.
 
-Run:  python3 build.py           -> writes out/*.svg, then render.js makes PDF/PNG
+Run:  python3 build.py && node render.js
 """
 import base64
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
-os.makedirs(OUT, exist_ok=True)
+FACES = os.path.join(OUT, "faces")
+os.makedirs(FACES, exist_ok=True)
 
-# ---- Brand ---------------------------------------------------------------
-NAVY = "#13294B"       # Pantone 2767 C (approx.) — box wrap
-ACCENT = "#4DA3FF"     # "x" in the placeholder logo
-SILVER = "#C9D3E3"     # tagline (silver foil on press)
+# ---- Brand (sampled from the 10xSEO banner + logo) ------------------------
+NAVY = "#111729"      # background
+GLOW = "#1E44C8"      # blue halo behind the pyramid
+GOLD = "#F1C744"      # "10x", accents
+GOLD_HI = "#FBE38A"   # glowing pyramid edges
 WHITE = "#FFFFFF"
-TAGLINE = "იყავი პირველი"
+
+
+def mtav(s):
+    """Mkhedruli -> Mtavruli (Georgian capitals), as in the brand banner."""
+    return "".join(chr(ord(c) - 0x10D0 + 0x1C90) if "ა" <= c <= "ჰ" else c for c in s)
+
+
+TAG_1, TAG_2 = mtav("იყავი"), mtav("პირველი")
+QUESTION_A, QUESTION_B = mtav("მზად ხარ იყო "), mtav("პირველი?")
+WELCOME = mtav("კეთილი იყოს შენი მობრძანება")
 URL = "10xseo.ge"
 
 # ---- Geometry (mm) -------------------------------------------------------
-TURN_IN = 15   # paper wrapped over the board edge to the inside
-FLAP = 12      # corner flaps on the long sides
-BLEED = 3
+TURN_IN, FLAP, BLEED = 15, 12, 3
 LID = dict(L=243.0, W=80.0, H=39.0)
-# base sits inside the lid: 2 mm board + 0.5 mm wrap each side
-BASE = dict(L=238.0, W=75.0, H=37.0)
+BASE = dict(L=238.0, W=75.0, H=37.0)     # 2 mm board + wrap inside the lid
+INSERT = dict(L=232.0, W=69.0)           # welcome card on top of the contents
 
 
 def font_face(family, path, weight):
     data = base64.b64encode(open(path, "rb").read()).decode()
-    fmt = "opentype" if path.endswith(".otf") else "truetype"
     return (f"@font-face{{font-family:'{family}';font-weight:{weight};"
-            f"src:url(data:font/{fmt};base64,{data}) format('{fmt}');}}")
+            f"src:url(data:font/ttf;base64,{data}) format('truetype');}}")
 
 
-FONTS_CSS = (
-    font_face("BoxLatin", "/usr/share/fonts/opentype/inter/Inter-ExtraBold.otf", 800)
-    + font_face("BoxGeo", os.path.join(HERE, "fonts", "NotoSansGeorgian-SemiBold.ttf"), 600)
-)
+FONTS_CSS = (font_face("Brand", os.path.join(HERE, "fonts", "Poppins-ExtraBold.ttf"), 800)
+             + font_face("Geo", os.path.join(HERE, "fonts", "NotoSansGeorgian-Black.ttf"), 900))
+
+# ---- Render mode ---------------------------------------------------------
+# "art"  = what gets printed
+# "mask" = material map for the 3D viewer: G = roughness, B = metalness (foil)
+MODE = "art"
+MASK_BASE, MASK_FOIL = "#00B400", "#005A8C"
 
 
-def logo(cx, cy, size):
-    """Placeholder wordmark. Replace this <g> with the real logo SVG."""
-    return (
-        f'<g id="LOGO_PLACEHOLDER" font-family="BoxLatin" font-weight="800" '
-        f'font-size="{size}" text-anchor="middle" letter-spacing="-0.4">'
-        f'<text x="{cx}" y="{cy}" fill="{WHITE}">10<tspan fill="{ACCENT}">x</tspan>SEO</text></g>'
-    )
+def ink(color, foil=False):
+    if MODE == "art":
+        return color
+    return MASK_FOIL if foil else MASK_BASE
 
 
+def defs():
+    return f"""<defs>
+<radialGradient id="halo"><stop offset="0" stop-color="{GLOW}" stop-opacity=".95"/>
+<stop offset=".45" stop-color="{GLOW}" stop-opacity=".45"/><stop offset="1" stop-color="{GLOW}" stop-opacity="0"/></radialGradient>
+<radialGradient id="flare"><stop offset="0" stop-color="#FFF8D0"/><stop offset=".3" stop-color="{GOLD_HI}" stop-opacity=".7"/>
+<stop offset="1" stop-color="{GOLD}" stop-opacity="0"/></radialGradient>
+<linearGradient id="faceL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E0A63C"/><stop offset=".55" stop-color="#7A4A17"/><stop offset="1" stop-color="#2B1A0E"/></linearGradient>
+<linearGradient id="faceR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B07A2A"/><stop offset=".55" stop-color="#4D2F12"/><stop offset="1" stop-color="#1C120B"/></linearGradient>
+<filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation=".7" result="b"/>
+<feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>"""
+
+
+def pyramid(cx, top, h):
+    """Glowing gold pyramid (brand mark), 3/4 view."""
+    if MODE == "mask":
+        return ""
+    P = lambda u, v: (cx + u * h, top + v * h)
+    A, Lf, F, R = P(0, 0), P(-0.55, 0.80), P(0.03, 1.0), P(0.58, 0.79)
+    lerp = lambda p, q, t: (p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t)
+    pt = lambda p: f"{p[0]:.2f},{p[1]:.2f}"
+    s = [f'<circle cx="{cx}" cy="{top + .55 * h}" r="{h * .95}" fill="url(#halo)"/>',
+         f'<polygon points="{pt(A)} {pt(Lf)} {pt(F)}" fill="url(#faceL)"/>',
+         f'<polygon points="{pt(A)} {pt(F)} {pt(R)}" fill="url(#faceR)"/>']
+    for t in (0.36, 0.68):
+        a, f, r = lerp(A, Lf, t), lerp(A, F, t), lerp(A, R, t)
+        s.append(f'<polyline points="{pt(a)} {pt(f)} {pt(r)}" fill="none" stroke="{GOLD_HI}" '
+                 f'stroke-width=".3" stroke-opacity=".75"/>')
+    s.append(f'<g filter="url(#glow)" fill="none" stroke="{GOLD_HI}" stroke-width=".45" stroke-linejoin="round">'
+             f'<polyline points="{pt(Lf)} {pt(A)} {pt(R)}"/><polyline points="{pt(Lf)} {pt(F)} {pt(R)}"/>'
+             f'<line x1="{A[0]}" y1="{A[1]}" x2="{F[0]}" y2="{F[1]}" stroke-opacity=".8"/></g>')
+    s.append(f'<circle cx="{A[0]}" cy="{A[1]}" r="{h * .09}" fill="url(#flare)"/>')
+    return "".join(s)
+
+
+def logo(cx, baseline, size, anchor="middle"):
+    """10xSEO wordmark: gold "10x" (foil) + white "SEO". Swap for vector logo when available."""
+    return (f'<text x="{cx}" y="{baseline}" font-family="Brand" font-weight="800" font-size="{size}" '
+            f'text-anchor="{anchor}" letter-spacing="-0.02em">'
+            f'<tspan fill="{ink(GOLD, True)}">10x</tspan><tspan fill="{ink(WHITE)}">SEO</tspan></text>')
+
+
+def geo(x, y, size, fill, text, foil=False, anchor="middle", ls="0.04em"):
+    return (f'<text x="{x}" y="{y}" font-family="Geo" font-weight="900" font-size="{size}" '
+            f'letter-spacing="{ls}" fill="{ink(fill, foil)}" text-anchor="{anchor}">{text}</text>')
+
+
+def face(w, h, body, bg=NAVY):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}mm" height="{h:g}mm" viewBox="0 0 {w:g} {h:g}">'
+            f'<style>{FONTS_CSS}</style>{defs()}<rect width="{w}" height="{h}" fill="{ink(bg)}"/>{body}</svg>')
+
+
+# ---- Lid faces -----------------------------------------------------------
+def lid_top(L, W):
+    px = 54
+    return face(L, W, pyramid(px, 12, 56)
+                + geo(160, 31, 11, WHITE, TAG_1)
+                + geo(160, 50, 15.5, GOLD, TAG_2, foil=True)
+                + f'<line x1="140" y1="58.5" x2="180" y2="58.5" stroke="{ink(GOLD, True)}" stroke-width=".35"/>'
+                + logo(160, 69, 7.2))
+
+
+def lid_front(L, H):
+    return face(L, H, f'<text x="{L / 2}" y="{H / 2 + 2.4}" font-family="Geo" font-weight="900" font-size="6.6" '
+                      f'letter-spacing=".04em" text-anchor="middle"><tspan fill="{ink(WHITE)}">{QUESTION_A}</tspan>'
+                      f'<tspan fill="{ink(GOLD, True)}">{QUESTION_B}</tspan></text>')
+
+
+def lid_back(L, H):
+    return face(L, H, f'<text x="{L / 2}" y="{H / 2 + 1.6}" font-family="Brand" font-weight="800" font-size="4.6" '
+                      f'letter-spacing=".12em" text-anchor="middle" fill="{ink(GOLD, True)}">{URL.upper()}</text>')
+
+
+def lid_end(W, H):
+    return face(W, H, logo(W / 2, H / 2 + 2.4, 7.5))
+
+
+# ---- Base faces (gold reveal when the lid comes off) ---------------------
+def base_side(w, h):
+    return face(w, h, "", bg=GOLD)
+
+
+def base_bottom(L, W):
+    return face(L, W, f'<g opacity="{1 if MODE == "art" else 0}">'
+                      f'<text x="{L / 2}" y="{W / 2}" font-family="Brand" font-weight="800" font-size="8" '
+                      f'text-anchor="middle" fill="{NAVY}">10xSEO</text>'
+                      f'<text x="{L / 2}" y="{W / 2 + 8}" font-family="Brand" font-weight="800" font-size="3.4" '
+                      f'letter-spacing=".14em" text-anchor="middle" fill="{NAVY}">{URL.upper()}</text></g>', bg=GOLD)
+
+
+def insert_card(L, W):
+    return face(L, W, pyramid(L / 2, 9, 26)
+                + geo(L / 2, 48, 6.2, WHITE, WELCOME)
+                + logo(L / 2, 60, 6.5))
+
+
+# ---- Dieline -------------------------------------------------------------
 def outline(L, W, H, T):
-    a = T + H
-    F = FLAP
+    a, F = T + H, FLAP
     pts = [
         (a + 2, 0), (a + L - 2, 0), (a + L, T),
         (a + L + F, T + 2), (a + L + F, a), (a + L + H, a),
@@ -66,98 +171,96 @@ def outline(L, W, H, T):
         (a - F, a), (a - F, T + 2), (a, T),
     ]
     d = "M" + " L".join(f"{x:g},{y:g}" for x, y in pts) + " Z"
-    # slits between corner flaps and short-side panels
-    slits = [
-        ((a + L, a), (a + L + F, a)), ((a + L, a + W), (a + L + F, a + W)),
-        ((a, a), (a - F, a)), ((a, a + W), (a - F, a + W)),
-    ]
-    for (x1, y1), (x2, y2) in slits:
+    for (x1, y1), (x2, y2) in [((a + L, a), (a + L + F, a)), ((a + L, a + W), (a + L + F, a + W)),
+                               ((a, a), (a - F, a)), ((a, a + W), (a - F, a + W))]:
         d += f" M{x1:g},{y1:g} L{x2:g},{y2:g}"
     return d
 
 
 def folds(L, W, H, T):
     a = T + H
-    lines = [
-        # top panel
-        (a, a, a + L, a), (a, a + W, a + L, a + W), (a, a, a, a + W), (a + L, a, a + L, a + W),
-        # turn-ins
-        (a, T, a + L, T), (a, a + W + H, a + L, a + W + H),
-        (T, a, T, a + W), (a + L + H, a, a + L + H, a + W),
-        # corner flaps
-        (a + L, T, a + L, a), (a, T, a, a), (a + L, a + W, a + L, a + W + H), (a, a + W, a, a + W + H),
-    ]
+    lines = [(a, a, a + L, a), (a, a + W, a + L, a + W), (a, a, a, a + W), (a + L, a, a + L, a + W),
+             (a, T, a + L, T), (a, a + W + H, a + L, a + W + H), (T, a, T, a + W), (a + L + H, a, a + L + H, a + W),
+             (a + L, T, a + L, a), (a, T, a, a), (a + L, a + W, a + L, a + W + H), (a, a + W, a, a + W + H)]
     return " ".join(f"M{x1:g},{y1:g} L{x2:g},{y2:g}" for x1, y1, x2, y2 in lines)
 
 
-def sheet(box, artwork=True, labels=False):
+def inner(svg):
+    """Strip the outer <svg> wrapper so a face can be nested in the sheet."""
+    return svg[svg.index(">") + 1: svg.rindex("</svg>")].replace(f"<style>{FONTS_CSS}</style>", "")
+
+
+def nest(svg, w, h, transform):
+    return (f'<g transform="{transform}"><svg width="{w:g}" height="{h:g}" viewBox="0 0 {w:g} {h:g}" '
+            f'overflow="hidden">{inner(svg)}</svg></g>')
+
+
+def sheet(box, top, front, back, end, bg, labels=False):
     L, W, H, T, B = box["L"], box["W"], box["H"], TURN_IN, BLEED
     a = T + H
     SW, SH = 2 * a + L, 2 * a + W
-    pad = 22 if labels else 0
-    vx, vy = -B - pad, -B - pad
-    vw, vh = SW + 2 * (B + pad), SH + 2 * (B + pad)
+    pad = 24 if labels else 0
+    vx, vy, vw, vh = -B - pad, -B - pad, SW + 2 * (B + pad), SH + 2 * (B + pad)
     g = []
     if labels:
         g.append(f'<rect x="{vx}" y="{vy}" width="{vw}" height="{vh}" fill="#fff"/>')
-    g.append(f'<g id="artwork"><rect x="{-B}" y="{-B}" width="{SW + 2 * B}" height="{SH + 2 * B}" fill="{NAVY}"/>')
-    if artwork:
-        cx, cy = a + L / 2, a + W / 2
-        g.append(logo(cx, cy + 3, 17))
-        g.append(f'<text x="{cx}" y="{cy + 19}" font-family="BoxGeo" font-weight="600" font-size="5.6" '
-                 f'letter-spacing="0.9" fill="{SILVER}" text-anchor="middle">{TAGLINE}</text>')
-        # front side panel (folds down, reads upright)
-        g.append(f'<text x="{cx}" y="{a + W + H / 2 + 1.4}" font-family="BoxLatin" font-weight="800" '
-                 f'font-size="4" letter-spacing="0.6" fill="{SILVER}" fill-opacity=".75" '
-                 f'text-anchor="middle">{URL}</text>')
+    g.append(f'<g id="artwork"><rect x="{-B}" y="{-B}" width="{SW + 2 * B}" height="{SH + 2 * B}" fill="{bg}"/>')
+    g.append(nest(top, L, W, f"translate({a},{a})"))
+    g.append(nest(front, L, H, f"translate({a},{a + W})"))
+    g.append(nest(back, L, H, f"translate({a + L},{a}) rotate(180)"))
+    g.append(nest(end, W, H, f"translate({T + H},{a}) rotate(90)"))
+    g.append(nest(end, W, H, f"translate({a + L},{a + W}) rotate(-90)"))
     g.append("</g>")
     g.append(f'<g id="dieline" fill="none" stroke-width="0.25">'
              f'<path d="{outline(L, W, H, T)}" stroke="#EC008C"/>'
              f'<path d="{folds(L, W, H, T)}" stroke="#00AEEF" stroke-dasharray="2 1.2"/></g>')
     if labels:
-        s = 'font-family="BoxLatin" font-size="4" fill="#333"'
+        s = 'font-family="Brand" font-size="4" fill="#333"'
         dim = lambda x1, y1, x2, y2: f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#333" stroke-width=".2"/>'
         y0 = -B - 8
         g.append(dim(a, y0, a + L, y0) + f'<text x="{a + L / 2}" y="{y0 - 1.5}" {s} text-anchor="middle">{L:g} mm</text>')
-        g.append(dim(0, y0 - 8, SW, y0 - 8) + f'<text x="{SW / 2}" y="{y0 - 9.5}" {s} text-anchor="middle">{SW:g} mm (ტრიმი)</text>')
+        g.append(dim(0, y0 - 9, SW, y0 - 9) + f'<text x="{SW / 2}" y="{y0 - 10.5}" {s} text-anchor="middle">{SW:g} mm trim</text>')
         x0 = SW + B + 8
-        g.append(dim(x0, a, x0, a + W) + f'<text x="{x0 + 2}" y="{a + W / 2}" {s} text-anchor="start">{W:g}</text>')
-        g.append(dim(x0, a + W, x0, a + W + H) + f'<text x="{x0 + 2}" y="{a + W + H / 2}" {s} text-anchor="start">{H:g}</text>')
-        g.append(dim(x0, a + W + H, x0, SH) + f'<text x="{x0 + 2}" y="{a + W + H + T / 2}" {s} text-anchor="start">{T:g}</text>')
-        g.append(f'<text x="{-B}" y="{SH + B + 9}" font-family="BoxLatin" fill="#333" text-anchor="start" font-size="3.4">'
-                 f'<tspan fill="#EC008C">━ ჭრა (cut)</tspan>   <tspan fill="#00AEEF">┅ კეცვა (fold)</tspan>   '
-                 f'ბლიდი {B} mm   ·   turn-in {T} mm</text>')
-    body = "".join(g)
+        for y1, y2, v in [(a, a + W, W), (a + W, a + W + H, H), (a + W + H, SH, T)]:
+            g.append(dim(x0, y1, x0, y2) + f'<text x="{x0 + 2}" y="{(y1 + y2) / 2 + 1.4}" {s} text-anchor="start">{v:g}</text>')
+        g.append(f'<text x="{-B}" y="{SH + B + 9}" font-family="Brand" font-size="3.4" fill="#333">'
+                 f'<tspan fill="#EC008C">cut</tspan>  ·  <tspan fill="#00AEEF">fold</tspan>  ·  bleed {B} mm  ·  turn-in {T} mm</text>')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{vw:g}mm" height="{vh:g}mm" '
-            f'viewBox="{vx:g} {vy:g} {vw:g} {vh:g}"><style>{FONTS_CSS}</style>{body}</svg>')
+            f'viewBox="{vx:g} {vy:g} {vw:g} {vh:g}"><style>{FONTS_CSS}</style>{"".join(g)}</svg>')
 
 
-def top_face(box):
-    """Top panel only (for the mockup)."""
-    L, W = box["L"], box["W"]
-    cx, cy = L / 2, W / 2
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {L:g} {W:g}"><style>{FONTS_CSS}</style>'
-            f'<rect width="{L}" height="{W}" fill="{NAVY}"/>{logo(cx, cy + 3, 17)}'
-            f'<text x="{cx}" y="{cy + 19}" font-family="BoxGeo" font-weight="600" font-size="5.6" '
-            f'letter-spacing="0.9" fill="{SILVER}" text-anchor="middle">{TAGLINE}</text></svg>')
-
-
-def front_face(box):
-    L, H = box["L"], box["H"]
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {L:g} {H:g}"><style>{FONTS_CSS}</style>'
-            f'<rect width="{L}" height="{H}" fill="{NAVY}"/>'
-            f'<text x="{L / 2}" y="{H / 2 + 1.4}" font-family="BoxLatin" font-weight="800" font-size="4" '
-            f'letter-spacing="0.6" fill="{SILVER}" fill-opacity=".75" text-anchor="middle">{URL}</text></svg>')
-
-
-files = {
-    "lid-dieline.svg": sheet(LID),
-    "base-dieline.svg": sheet(BASE, artwork=False),
-    "lid-dieline-annotated.svg": sheet(LID, labels=True),
-    "_top.svg": top_face(LID),
-    "_front.svg": front_face(LID),
-}
-for name, svg in files.items():
-    with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
+def write(path, svg):
+    with open(path, "w", encoding="utf-8") as f:
         f.write(svg)
-print("wrote", ", ".join(files))
+
+
+def build():
+    global MODE
+    out = {}
+    for MODE in ("art", "mask"):
+        sfx = "" if MODE == "art" else "-mask"
+        Lw, Lh, Ld = LID["L"], LID["W"], LID["H"]
+        Bw, Bh, Bd = BASE["L"], BASE["W"], BASE["H"]
+        f = {
+            "lid-top": lid_top(Lw, Lh), "lid-front": lid_front(Lw, Ld), "lid-back": lid_back(Lw, Ld),
+            "lid-end": lid_end(Lh, Ld), "base-side-long": base_side(Bw, Bd), "base-side-short": base_side(Bh, Bd),
+            "base-bottom": base_bottom(Bw, Bh), "insert-card": insert_card(INSERT["L"], INSERT["W"]),
+        }
+        for k, v in f.items():
+            write(os.path.join(FACES, f"{k}{sfx}.svg"), v)
+        if MODE == "art":
+            out = f
+    MODE = "art"
+    write(os.path.join(OUT, "lid-dieline.svg"),
+          sheet(LID, out["lid-top"], out["lid-front"], out["lid-back"], out["lid-end"], NAVY))
+    write(os.path.join(OUT, "lid-dieline-annotated.svg"),
+          sheet(LID, out["lid-top"], out["lid-front"], out["lid-back"], out["lid-end"], NAVY, labels=True))
+    write(os.path.join(OUT, "base-dieline.svg"),
+          sheet(BASE, out["base-bottom"], out["base-side-long"], out["base-side-long"],
+                out["base-side-short"], GOLD))
+    write(os.path.join(OUT, "insert-card.svg"), out["insert-card"])
+    print("ok")
+
+
+if __name__ == "__main__":
+    build()
