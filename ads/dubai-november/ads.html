@@ -1,0 +1,161 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#01023a;--navy2:#060a52;--blue:#0a3bd6;--yellow:#ffc400;--white:#fff;--muted:#aab3e6;--red:#ff4d5e;--green:#2ee59d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#222;font-family:Inter,sans-serif;color:#fff}
+.ad{position:relative;overflow:hidden;background:var(--navy);margin:40px}
+.sq{width:1080px;height:1080px}
+.st{width:1080px;height:1920px}
+.glow{position:absolute;border-radius:50%;filter:blur(10px);background:radial-gradient(circle,rgba(20,70,255,.75) 0%,rgba(10,40,200,.35) 35%,rgba(1,2,58,0) 70%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:54px 54px;mask-image:radial-gradient(circle at 50% 45%,#000 30%,transparent 75%)}
+.logo{font-family:Fredoka;font-weight:700;letter-spacing:-1px;line-height:1}
+.logo b{color:var(--yellow);font-weight:700}
+.f{font-family:Fredoka;font-weight:700;text-transform:uppercase;line-height:.95;letter-spacing:.5px}
+.y{color:var(--yellow)}
+.pill{display:inline-flex;align-items:center;gap:14px;border-radius:999px;font-family:Fredoka;font-weight:600;text-transform:uppercase}
+.urgent{background:rgba(255,77,94,.14);border:2px solid rgba(255,77,94,.7);color:#fff}
+.dot{width:16px;height:16px;border-radius:50%;background:var(--red);box-shadow:0 0 0 6px rgba(255,77,94,.25),0 0 24px var(--red)}
+.cta{display:flex;align-items:center;justify-content:center;gap:18px;background:var(--yellow);color:var(--navy);font-family:Fredoka;font-weight:700;text-transform:uppercase;border-radius:22px;box-shadow:0 18px 50px rgba(255,196,0,.35),inset 0 -6px 0 rgba(0,0,0,.12)}
+.card{background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.02));border:1.5px solid rgba(140,160,255,.28);border-radius:28px}
+.chk{display:flex;align-items:center;gap:18px;font-weight:600;color:#e8ecff}
+.chk i{flex:none;width:40px;height:40px;border-radius:12px;background:var(--yellow);display:grid;place-items:center}
+.chk i svg{width:24px;height:24px}
+.skyline{position:absolute;left:0;right:0;bottom:0;opacity:.9}
+.seats{display:flex;gap:12px}
+.seat{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.18)}
+.seat.open{background:var(--yellow);border-color:var(--yellow);box-shadow:0 0 24px rgba(255,196,0,.6)}
+</style></head><body>
+
+<!-- reusable skyline -->
+<svg width="0" height="0" style="position:absolute">
+ <defs>
+  <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2aa8" stop-opacity=".55"/><stop offset="1" stop-color="#01023a" stop-opacity="1"/></linearGradient>
+  <symbol id="city" viewBox="0 0 1080 300" preserveAspectRatio="none">
+   <path fill="url(#sk)" d="M0 300V230h40v-30h30v-40h26v60h34v-90h22v-20h18v20h14v110h40v-70h50v-50h10v-30h14v30h10v50h28v90h30v-130h20l6-30 6 30h18v130h26v-60h40v-40h24v40h20v-70l14-10 14 10v70h18v-150h8v-40h6v-60h4l3-68 3 68h4v60h6v40h8v150h22v-90h34v-30h22v30h20v120h36v-80h30v-50h26v50h20v100h40v-60h30v-30h16v30h26v80h44v-50h34v70z"/>
+  </symbol>
+  <symbol id="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#01023a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+ </defs>
+</svg>
+
+<!-- ============ AD 1: OFFER / SCARCITY (square) ============ -->
+<div class="ad sq" id="ad1">
+ <div class="glow" style="width:1100px;height:1100px;left:-10px;top:-120px"></div>
+ <div class="grid"></div>
+
+ <div style="position:absolute;left:70px;top:62px" class="logo"><span style="font-size:58px"><b>10x</b>SEO</span></div>
+ <div style="position:absolute;right:70px;top:66px" class="pill urgent" ><span class="dot"></span><span style="font-size:24px;padding:12px 22px 12px 0">Dubai · November</span></div>
+
+ <div style="position:absolute;left:70px;right:70px;top:190px">
+  <div class="f" style="font-size:52px;color:#dfe5ff">Get a <span class="y">FREE</span></div>
+  <div class="f y" style="font-size:150px;margin-top:6px;text-shadow:0 0 60px rgba(255,196,0,.35)">AI SEO</div>
+  <div class="f" style="font-size:150px">Audit</div>
+  <div style="font-size:30px;font-weight:600;color:var(--muted);margin-top:22px;line-height:1.35">See why customers find your competitors on <span style="color:#fff">Google &amp; ChatGPT</span> — and not you.</div>
+ </div>
+
+ <div class="card" style="position:absolute;left:70px;right:70px;top:676px;padding:30px 34px;display:flex;align-items:center;justify-content:space-between">
+  <div>
+   <div class="f" style="font-size:44px">Only <span class="y">2 spots</span> left</div>
+   <div style="font-size:24px;color:var(--muted);margin-top:8px;font-weight:600">for November audits</div>
+  </div>
+  <div class="seats">
+   <div class="seat"></div><div class="seat"></div><div class="seat"></div><div class="seat"></div>
+   <div class="seat"></div><div class="seat"></div><div class="seat open"></div><div class="seat open"></div>
+  </div>
+ </div>
+
+ <div class="cta" style="position:absolute;left:70px;right:70px;top:880px;height:118px;font-size:46px">
+  Claim your free audit
+  <svg width="46" height="46" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#01023a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+ </div>
+</div>
+
+<!-- ============ AD 2: RESULTS / PROOF (square) ============ -->
+<div class="ad sq" id="ad2">
+ <div class="glow" style="width:1000px;height:1000px;left:40px;top:120px"></div>
+ <div class="grid"></div>
+
+ <div style="position:absolute;left:70px;top:62px" class="logo"><span style="font-size:58px"><b>10x</b>SEO</span></div>
+ <div style="position:absolute;right:70px;top:66px" class="pill urgent"><span class="dot"></span><span style="font-size:24px;padding:12px 22px 12px 0">2 spots left</span></div>
+
+ <div style="position:absolute;left:70px;right:70px;top:170px">
+  <div class="f" style="font-size:96px">Real <span class="y">AI SEO</span></div>
+  <div class="f" style="font-size:96px">Results</div>
+ </div>
+
+ <!-- stat cards -->
+ <div style="position:absolute;left:70px;right:70px;top:400px;display:grid;grid-template-columns:1fr 1fr;gap:26px">
+  <div class="card" style="padding:30px 32px 0;overflow:hidden;height:330px;position:relative">
+   <div style="font-size:22px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">Google impressions · 3 mo</div>
+   <div style="display:flex;align-items:baseline;gap:16px;margin-top:14px">
+    <span style="font-size:38px;font-weight:700;color:#7d86c4;text-decoration:line-through">661</span>
+    <span class="f y" style="font-size:84px">4,930</span>
+   </div>
+   <div class="pill" style="background:rgba(46,229,157,.15);color:var(--green);font-size:26px;padding:8px 18px;margin-top:10px">▲ +646%</div>
+   <svg viewBox="0 0 400 110" preserveAspectRatio="none" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:100px">
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc400" stop-opacity=".45"/><stop offset="1" stop-color="#ffc400" stop-opacity="0"/></linearGradient></defs>
+    <path d="M0 98 L30 92 L60 95 L90 86 L120 90 L150 80 L180 84 L210 70 L240 74 L270 58 L300 62 L330 40 L350 48 L370 22 L400 12 L400 110 L0 110Z" fill="url(#g1)"/>
+    <path d="M0 98 L30 92 L60 95 L90 86 L120 90 L150 80 L180 84 L210 70 L240 74 L270 58 L300 62 L330 40 L350 48 L370 22 L400 12" fill="none" stroke="#ffc400" stroke-width="4" stroke-linejoin="round"/>
+   </svg>
+  </div>
+  <div class="card" style="padding:30px 32px 0;overflow:hidden;height:330px;position:relative">
+   <div style="font-size:22px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">New website · 6 mo</div>
+   <div style="display:flex;align-items:baseline;gap:16px;margin-top:14px">
+    <span style="font-size:38px;font-weight:700;color:#7d86c4">0 →</span>
+    <span class="f y" style="font-size:84px">3,370</span>
+   </div>
+   <div class="pill" style="background:rgba(46,229,157,.15);color:var(--green);font-size:26px;padding:8px 18px;margin-top:10px">▲ from zero</div>
+   <svg viewBox="0 0 400 110" preserveAspectRatio="none" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:100px">
+    <path d="M0 106 L40 104 L80 100 L120 96 L160 92 L200 88 L230 80 L260 82 L290 66 L320 60 L345 38 L365 50 L385 18 L400 26 L400 110 L0 110Z" fill="url(#g1)"/>
+    <path d="M0 106 L40 104 L80 100 L120 96 L160 92 L200 88 L230 80 L260 82 L290 66 L320 60 L345 38 L365 50 L385 18 L400 26" fill="none" stroke="#ffc400" stroke-width="4" stroke-linejoin="round"/>
+   </svg>
+  </div>
+ </div>
+
+ <div style="position:absolute;left:70px;right:70px;top:772px;font-size:32px;font-weight:600;color:#dfe5ff;text-align:center;line-height:1.3">
+  Want results like this? Start with a <span class="y" style="font-weight:800">FREE AI SEO audit.</span>
+ </div>
+
+ <div class="cta" style="position:absolute;left:70px;right:70px;top:880px;height:118px;font-size:46px">
+  Get my free audit
+  <svg width="46" height="46" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#01023a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+ </div>
+ <div style="position:absolute;left:0;right:0;top:1018px;text-align:center;font-size:20px;color:#7d86c4;font-weight:600">Results from real 10xSEO client projects (Google Search Console)</div>
+</div>
+
+<!-- ============ AD 3: STORY / REELS 9:16 ============ -->
+<div class="ad st" id="ad3">
+ <div class="glow" style="width:1400px;height:1400px;left:-160px;top:180px"></div>
+ <div class="grid"></div>
+ <svg class="skyline" height="420" width="1080"><use href="#city"/></svg>
+
+ <!-- keep top 250px & bottom 340px clear of key text (story UI safe zones) -->
+ <div style="position:absolute;left:0;right:0;top:260px;text-align:center" class="logo"><span style="font-size:64px"><b>10x</b>SEO</span></div>
+
+ <div style="position:absolute;left:0;right:0;top:380px;text-align:center">
+  <div class="pill urgent" style="padding:0 30px 0 26px"><span class="dot"></span><span style="font-size:30px;padding:16px 0">Only 2 spots left in November</span></div>
+ </div>
+
+ <div style="position:absolute;left:70px;right:70px;top:510px;text-align:center">
+  <div class="f" style="font-size:64px;color:#dfe5ff">Free</div>
+  <div class="f y" style="font-size:190px;margin-top:4px;text-shadow:0 0 70px rgba(255,196,0,.35)">AI SEO</div>
+  <div class="f" style="font-size:190px">Audit</div>
+  <div style="font-size:36px;font-weight:600;color:var(--muted);margin-top:28px;line-height:1.35">for Dubai businesses that want to be found on <span style="color:#fff">Google, ChatGPT &amp; Gemini</span></div>
+ </div>
+
+ <div class="card" style="position:absolute;left:90px;right:90px;top:1080px;padding:40px 44px;display:flex;flex-direction:column;gap:26px">
+  <div class="chk" style="font-size:34px"><i><svg><use href="#tick"/></svg></i>AI search visibility check</div>
+  <div class="chk" style="font-size:34px"><i><svg><use href="#tick"/></svg></i>Technical SEO issues found</div>
+  <div class="chk" style="font-size:34px"><i><svg><use href="#tick"/></svg></i>Competitor gap analysis</div>
+  <div class="chk" style="font-size:34px"><i><svg><use href="#tick"/></svg></i>Step-by-step growth plan</div>
+ </div>
+
+ <div class="cta" style="position:absolute;left:90px;right:90px;top:1455px;height:130px;font-size:50px">
+  Claim your spot
+  <svg width="50" height="50" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#01023a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+ </div>
+ <div style="position:absolute;left:0;right:0;top:1610px;text-align:center;font-size:26px;color:#c5ccf5;font-weight:600">100% free · No obligation · Takes 2 minutes</div>
+</div>
+
+</body></html>
