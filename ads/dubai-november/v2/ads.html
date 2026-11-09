@@ -1,0 +1,225 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#020335;--y:#ffc400;--y2:#ffdb4d;--muted:#a9b2ea;--red:#ff4757;--green:#25e39a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;font-family:Inter,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+.ad{position:relative;overflow:hidden;margin:40px;background:
+ radial-gradient(120% 80% at 50% 110%,#0c2bd1 0%,rgba(12,43,209,0) 55%),
+ radial-gradient(70% 50% at 85% 0%,rgba(120,60,255,.35) 0%,rgba(0,0,0,0) 70%),
+ linear-gradient(180deg,#01022a 0%,#030650 100%)}
+.sq{width:1080px;height:1080px}.st{width:1080px;height:1920px}
+.noise{position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.beams{position:absolute;inset:-20%;background:conic-gradient(from 200deg at 50% 100%,transparent 0deg,rgba(80,120,255,.10) 8deg,transparent 16deg,rgba(80,120,255,.08) 26deg,transparent 34deg,rgba(255,196,0,.06) 44deg,transparent 52deg)}
+.stars{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 12% 18%,#fff8,transparent),radial-gradient(1px 1px at 32% 8%,#fff6,transparent),radial-gradient(1.5px 1.5px at 72% 14%,#fff7,transparent),radial-gradient(1px 1px at 88% 30%,#fff5,transparent),radial-gradient(1px 1px at 55% 24%,#fff5,transparent),radial-gradient(1.5px 1.5px at 6% 42%,#fff4,transparent)}
+.logo{font-family:Fredoka;font-weight:700;letter-spacing:-1.5px;line-height:1}
+.logo b{color:var(--y)}
+.f{font-family:Fredoka;font-weight:700;text-transform:uppercase;line-height:.92;letter-spacing:.3px}
+.y{color:var(--y)}
+.ygrad{background:linear-gradient(180deg,#ffe36b 0%,#ffc400 55%,#ffad00 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,180,0,.35))}
+.wgrad{background:linear-gradient(180deg,#fff 40%,#c9d2ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{position:absolute;display:flex;align-items:center;justify-content:center;gap:20px;overflow:hidden;
+ background:linear-gradient(180deg,#ffd84a 0%,#ffc400 50%,#f5b000 100%);color:#020335;font-family:Fredoka;font-weight:700;text-transform:uppercase;border-radius:24px;
+ box-shadow:0 0 0 6px rgba(255,196,0,.18),0 24px 60px rgba(255,170,0,.45),inset 0 2px 0 rgba(255,255,255,.6),inset 0 -6px 0 rgba(0,0,0,.12)}
+.cta:after{content:"";position:absolute;top:-40%;bottom:-40%;width:90px;left:12%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:rotate(20deg)}
+.cta .arr{width:62px;height:62px;border-radius:50%;background:#020335;display:grid;place-items:center}
+.glass{background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.03));border:1.5px solid rgba(160,175,255,.30);border-radius:30px;box-shadow:0 30px 80px rgba(0,0,10,.55),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+.stamp{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;
+ background:radial-gradient(circle at 35% 30%,#ff6b78,#e3182f 70%);color:#fff;box-shadow:0 18px 40px rgba(227,24,47,.5),inset 0 0 0 5px rgba(255,255,255,.25)}
+.stamp:before{content:"";position:absolute;inset:12px;border:2.5px dashed rgba(255,255,255,.55);border-radius:50%}
+.live{display:inline-flex;align-items:center;gap:12px}
+.live i{width:14px;height:14px;border-radius:50%;background:var(--red);box-shadow:0 0 0 6px rgba(255,71,87,.25),0 0 18px var(--red)}
+.chip{display:inline-flex;align-items:center;gap:12px;padding:10px 20px;border-radius:999px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.16);font-weight:700}
+.row{display:flex;align-items:center;gap:18px}
+.num{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:22px}
+.tick{flex:none;width:42px;height:42px;border-radius:13px;background:var(--y);display:grid;place-items:center;box-shadow:0 6px 18px rgba(255,196,0,.35)}
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+ <linearGradient id="bld" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2fb8"/><stop offset=".6" stop-color="#0a1268"/><stop offset="1" stop-color="#030640"/></linearGradient>
+ <linearGradient id="bld2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14208a"/><stop offset="1" stop-color="#02043a"/></linearGradient>
+ <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc400" stop-opacity=".9"/><stop offset="1" stop-color="#ffc400" stop-opacity="0"/></linearGradient>
+ <pattern id="win" width="14" height="18" patternUnits="userSpaceOnUse"><rect x="4" y="5" width="3" height="5" fill="#ffd34d" opacity=".35"/></pattern>
+ <symbol id="skyline" viewBox="0 0 1080 520" preserveAspectRatio="xMidYMax meet">
+  <!-- back layer -->
+  <path fill="url(#bld2)" opacity=".75" d="M0 520V360h50v-40h40v60h30V300h46v-30h20v30h18v220zM820 520V330h34v-40h44v-30h10v30h30v70h40v-50h50v50h48v190z"/>
+  <!-- front towers -->
+  <g fill="url(#bld)">
+   <path d="M60 520V420h70v100z"/><path d="M150 520V330l40-30 40 30v190z"/><path d="M250 520V380h60v140z"/>
+   <path d="M320 520V300h22l8-40 8 40h22v220z"/><path d="M395 520V400h50v120z"/>
+   <!-- Burj Khalifa -->
+   <path d="M480 520V430h10v-70h10v-80h10v-70h8v-60h6v-60h5l3-80h2l3 80h5v60h6v60h8v70h10v80h10v70h10v90z"/>
+   <path d="M620 520V360h46v160z"/>
+   <!-- Emirates-like twin -->
+   <path d="M680 520V250l28-40v310z"/><path d="M720 520V290l24-34v264z"/>
+   <!-- sail -->
+   <path d="M770 520V300c60 30 80 120 80 220z"/>
+   <path d="M870 520V410h60v110z"/><path d="M940 520V350h50v170z"/><path d="M1000 520V430h80v90z"/>
+  </g>
+  <g fill="url(#win)"><path d="M150 520V340h80v180z"/><path d="M320 520V310h60v210z"/><path d="M620 520V370h46v150z"/><path d="M940 520V360h50v160z"/><path d="M250 520V390h60v130z"/></g>
+  <path d="M533 30l3 80" stroke="url(#edge)" stroke-width="3"/>
+  <circle cx="534.5" cy="30" r="4" fill="#ff4757"/><circle cx="534.5" cy="30" r="12" fill="#ff4757" opacity=".25"/>
+  <rect x="0" y="516" width="1080" height="4" fill="#ffc400" opacity=".25"/>
+ </symbol>
+ <symbol id="chk" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#020335" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+ <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#ffc400" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+ <symbol id="spark" viewBox="0 0 24 24"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z" fill="#ffc400"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" fill="#ffc400"/></symbol>
+</defs></svg>
+
+<!-- ================= A: HOOK — AI recommends your competitors ================= -->
+<div class="ad sq" id="a">
+ <div class="beams"></div><div class="stars"></div>
+ <svg style="position:absolute;left:0;bottom:0;opacity:.55" width="1080" height="520"><use href="#skyline"/></svg>
+ <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(2,3,53,.85) 100%)"></div>
+ <div class="noise"></div>
+
+ <div class="logo" style="position:absolute;left:64px;top:58px;font-size:54px"><b>10x</b>SEO</div>
+ <div class="chip" style="position:absolute;right:64px;top:60px;font-size:22px"><span class="live"><i></i></span>Dubai · Nov 2026</div>
+
+ <div style="position:absolute;left:64px;right:64px;top:160px">
+  <div class="f wgrad" style="font-size:80px">Is AI sending</div>
+  <div class="f" style="font-size:80px"><span class="wgrad">your clients to </span></div>
+  <div class="f ygrad" style="font-size:80px">competitors?</div>
+ </div>
+
+ <!-- chat mock -->
+ <div class="glass" style="position:absolute;left:64px;width:640px;top:450px;padding:26px 28px;transform:perspective(1400px) rotateY(9deg) rotateX(2deg);transform-origin:left center">
+  <div class="row" style="gap:12px;margin-bottom:18px">
+   <svg width="30" height="30"><use href="#spark"/></svg><span style="font-weight:800;font-size:20px;letter-spacing:1.5px;color:var(--muted)">AI SEARCH</span>
+  </div>
+  <div style="margin-left:auto;width:fit-content;max-width:92%;background:#2f45ff;border-radius:22px 22px 6px 22px;padding:16px 22px;font-size:24px;font-weight:600">Best clinic in Dubai Marina? 🤔</div>
+  <div style="margin-top:18px;display:flex;flex-direction:column;gap:12px;font-size:23px;font-weight:600">
+   <div class="row" style="gap:14px"><div class="num" style="background:rgba(37,227,154,.15);color:var(--green)">1</div>Competitor A <span style="color:var(--green);margin-left:auto">✓ recommended</span></div>
+   <div class="row" style="gap:14px"><div class="num" style="background:rgba(37,227,154,.15);color:var(--green)">2</div>Competitor B <span style="color:var(--green);margin-left:auto">✓ recommended</span></div>
+   <div class="row" style="gap:14px;padding:12px 14px;margin:2px -14px 0;border-radius:16px;background:rgba(255,71,87,.12);border:1.5px dashed rgba(255,71,87,.6)"><div class="num" style="background:rgba(255,71,87,.2);color:var(--red)">✕</div>Your business <span style="color:var(--red);margin-left:auto">not mentioned</span></div>
+  </div>
+ </div>
+
+ <!-- stamp -->
+ <div class="stamp" style="right:70px;top:470px;width:250px;height:250px;transform:rotate(10deg)">
+  <div style="font-weight:800;font-size:20px;letter-spacing:2px">ONLY</div>
+  <div class="f" style="font-size:100px;line-height:.9">2</div>
+  <div style="font-weight:800;font-size:20px;letter-spacing:2px">SPOTS LEFT</div>
+  <div style="font-weight:700;font-size:15px;letter-spacing:2px;opacity:.85;margin-top:4px">NOVEMBER</div>
+ </div>
+ <div style="position:absolute;right:64px;top:760px;width:290px;text-align:center;font-size:24px;font-weight:700;color:#dfe5ff;line-height:1.3">Find out <span class="y">why</span> — and how to fix it.</div>
+
+ <div class="cta" style="left:64px;right:64px;top:880px;height:128px;font-size:48px">Get your free AI SEO audit<span class="arr"><svg width="34" height="34"><use href="#arrow"/></svg></span></div>
+</div>
+
+<!-- ================= B: PROOF ================= -->
+<div class="ad sq" id="b">
+ <div class="beams"></div><div class="noise"></div>
+ <div class="logo" style="position:absolute;left:64px;top:58px;font-size:54px"><b>10x</b>SEO</div>
+ <div class="chip" style="position:absolute;right:64px;top:60px;font-size:22px;border-color:rgba(255,71,87,.6);background:rgba(255,71,87,.12)"><span class="live"><i></i></span>Only 2 spots left</div>
+
+ <div style="position:absolute;left:64px;top:165px">
+  <div style="font-weight:800;font-size:26px;letter-spacing:3px;color:var(--muted)">AI SEO RESULTS · 90 DAYS</div>
+  <div class="f ygrad" style="font-size:250px;line-height:.85;margin-top:14px;letter-spacing:-4px">+646%</div>
+  <div class="f wgrad" style="font-size:54px;margin-top:6px">Google impressions</div>
+ </div>
+
+ <!-- tilted chart card -->
+ <div class="glass" style="position:absolute;left:64px;right:64px;top:560px;height:270px;padding:24px 30px;overflow:hidden">
+  <div class="row" style="justify-content:space-between">
+   <div class="row" style="gap:34px">
+    <div><div style="font-size:18px;color:var(--muted);font-weight:700">BEFORE</div><div style="font-size:40px;font-weight:800;color:#8a93cf">661</div></div>
+    <svg width="40" height="40"><use href="#arrow"/></svg>
+    <div><div style="font-size:18px;color:var(--muted);font-weight:700">AFTER</div><div style="font-size:40px;font-weight:800" class="y">4,930</div></div>
+   </div>
+   <div style="text-align:right"><div style="font-size:18px;color:var(--muted);font-weight:700">NEW SITE · 6 MO</div><div style="font-size:40px;font-weight:800"><span style="color:#8a93cf">0 →</span> <span class="y">3,370</span></div></div>
+  </div>
+  <svg viewBox="0 0 900 140" preserveAspectRatio="none" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:150px">
+   <defs><linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc400" stop-opacity=".5"/><stop offset="1" stop-color="#ffc400" stop-opacity="0"/></linearGradient>
+   <filter id="gl"><feGaussianBlur stdDeviation="4"/></filter></defs>
+   <path d="M0 132 L60 130 L120 131 L180 127 L240 129 L300 122 L360 124 L420 112 L480 116 L540 100 L600 104 L660 80 L700 88 L740 60 L780 70 L820 30 L850 44 L900 14" fill="none" stroke="#ffc400" stroke-width="10" opacity=".5" filter="url(#gl)"/>
+   <path d="M0 132 L60 130 L120 131 L180 127 L240 129 L300 122 L360 124 L420 112 L480 116 L540 100 L600 104 L660 80 L700 88 L740 60 L780 70 L820 30 L850 44 L900 14 V140 H0Z" fill="url(#ar)"/>
+   <path d="M0 132 L60 130 L120 131 L180 127 L240 129 L300 122 L360 124 L420 112 L480 116 L540 100 L600 104 L660 80 L700 88 L740 60 L780 70 L820 30 L850 44 L900 14" fill="none" stroke="#ffc400" stroke-width="4" stroke-linejoin="round"/>
+   <path d="M0 136 L120 135 L240 134 L360 133 L480 134 L600 132 L720 131 L900 130" fill="none" stroke="#8a93cf" stroke-width="3" stroke-dasharray="8 8"/>
+  </svg>
+ </div>
+
+ <div style="position:absolute;left:64px;right:64px;top:850px;text-align:center;font-size:26px;font-weight:600;color:#dfe5ff">Your growth plan starts with a <b class="y">free audit</b> — Dubai businesses only.</div>
+ <div class="cta" style="left:64px;right:64px;top:905px;height:120px;font-size:46px">I want these results<span class="arr"><svg width="34" height="34"><use href="#arrow"/></svg></span></div>
+ <div style="position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:16px;color:#6d76b8;font-weight:600">Real client data · Google Search Console</div>
+</div>
+
+<!-- ================= C: VOUCHER ================= -->
+<div class="ad sq" id="c">
+ <div class="beams"></div><div class="stars"></div>
+ <svg style="position:absolute;left:0;bottom:0" width="1080" height="520"><use href="#skyline"/></svg>
+ <div style="position:absolute;left:50%;top:600px;width:900px;height:500px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(255,180,0,.28),transparent)"></div>
+ <div class="noise"></div>
+
+ <div style="position:absolute;left:0;right:0;top:58px;text-align:center" class="logo"><span style="font-size:54px"><b>10x</b>SEO</span></div>
+ <div style="position:absolute;left:0;right:0;top:150px;text-align:center">
+  <div class="f" style="font-size:66px"><span class="wgrad">Your </span><span class="ygrad">November</span><span class="wgrad"> gift</span></div>
+ </div>
+
+ <!-- ticket -->
+ <div style="position:absolute;left:90px;right:90px;top:270px;height:420px;transform:rotate(-3deg);filter:drop-shadow(0 40px 60px rgba(0,0,0,.55)) drop-shadow(0 0 50px rgba(255,180,0,.35))">
+  <div style="position:absolute;inset:0;border-radius:34px;background:linear-gradient(135deg,#ffe066 0%,#ffc400 45%,#f2a900 100%);
+   -webkit-mask:radial-gradient(circle 34px at 680px 0,#0000 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 34px at 680px 100%,#0000 98%,#000) bottom/100% 51% no-repeat;"></div>
+  <div style="position:absolute;left:680px;top:44px;bottom:44px;border-left:4px dashed rgba(2,3,53,.35)"></div>
+  <div style="position:absolute;left:56px;top:36px;width:600px;color:#020335">
+   <div style="font-weight:900;font-size:22px;letter-spacing:4px;opacity:.7">VOUCHER · DUBAI</div>
+   <div class="f" style="font-size:100px;margin-top:12px;line-height:.88">Free<br>AI SEO<br>Audit</div>
+   <div style="margin-top:16px;font-size:24px;font-weight:800">Value <s style="opacity:.6">AED 1,500</s> → <span style="background:#020335;color:#ffc400;padding:4px 14px;border-radius:10px">AED 0</span></div>
+  </div>
+  <div style="position:absolute;left:684px;right:0;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#020335;text-align:center">
+   <div style="font-weight:900;font-size:22px;letter-spacing:3px">ONLY</div>
+   <div class="f" style="font-size:160px;line-height:.85">2</div>
+   <div style="font-weight:900;font-size:22px;letter-spacing:3px">LEFT</div>
+   <div style="margin-top:12px;font-size:16px;font-weight:800;letter-spacing:2px;opacity:.7">NOV 2026</div>
+  </div>
+ </div>
+
+ <div style="position:absolute;left:90px;right:90px;top:745px;display:flex;justify-content:center;gap:26px;font-size:24px;font-weight:700;color:#e6eaff">
+  <span class="row" style="gap:10px"><span class="tick" style="width:34px;height:34px;border-radius:10px"><svg width="20" height="20"><use href="#chk"/></svg></span>Google</span>
+  <span class="row" style="gap:10px"><span class="tick" style="width:34px;height:34px;border-radius:10px"><svg width="20" height="20"><use href="#chk"/></svg></span>ChatGPT</span>
+  <span class="row" style="gap:10px"><span class="tick" style="width:34px;height:34px;border-radius:10px"><svg width="20" height="20"><use href="#chk"/></svg></span>Gemini</span>
+  <span class="row" style="gap:10px"><span class="tick" style="width:34px;height:34px;border-radius:10px"><svg width="20" height="20"><use href="#chk"/></svg></span>Competitors</span>
+ </div>
+ <div class="cta" style="left:90px;right:90px;top:840px;height:124px;font-size:48px">Claim my voucher<span class="arr"><svg width="34" height="34"><use href="#arrow"/></svg></span></div>
+ <div style="position:absolute;left:0;right:0;top:988px;text-align:center;font-size:20px;color:#c5ccf5;font-weight:600">No obligation · Results in 48h · Fill out the form</div>
+</div>
+
+<!-- ================= D: STORY ================= -->
+<div class="ad st" id="d">
+ <div class="beams"></div><div class="stars"></div>
+ <svg style="position:absolute;left:0;bottom:0;opacity:.4" width="1080" height="720" viewBox="0 0 1080 520" preserveAspectRatio="xMidYMax slice"><use href="#skyline" width="1080" height="520"/></svg>
+ <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(2,3,53,.9) 100%)"></div>
+ <div class="noise"></div>
+
+ <div style="position:absolute;left:0;right:0;top:250px;text-align:center" class="logo"><span style="font-size:62px"><b>10x</b>SEO</span></div>
+ <div style="position:absolute;left:70px;right:70px;top:370px;text-align:center">
+  <div class="f wgrad" style="font-size:96px">Is AI sending</div>
+  <div class="f wgrad" style="font-size:96px">your clients to</div>
+  <div class="f ygrad" style="font-size:110px;margin-top:6px">competitors?</div>
+ </div>
+
+ <div class="glass" style="position:absolute;left:90px;right:90px;top:800px;padding:30px 34px">
+  <div class="row" style="gap:12px;margin-bottom:22px"><svg width="34" height="34"><use href="#spark"/></svg><span style="font-weight:800;font-size:22px;letter-spacing:1.5px;color:var(--muted)">AI SEARCH</span></div>
+  <div style="margin-left:auto;width:fit-content;background:#2f45ff;border-radius:24px 24px 6px 24px;padding:18px 26px;font-size:30px;font-weight:600">Best clinic in Dubai Marina? 🤔</div>
+  <div style="margin-top:24px;display:flex;flex-direction:column;gap:16px;font-size:30px;font-weight:600">
+   <div class="row"><div class="num" style="width:52px;height:52px;background:rgba(37,227,154,.15);color:var(--green)">1</div>Competitor A<span style="color:var(--green);margin-left:auto">✓</span></div>
+   <div class="row"><div class="num" style="width:52px;height:52px;background:rgba(37,227,154,.15);color:var(--green)">2</div>Competitor B<span style="color:var(--green);margin-left:auto">✓</span></div>
+   <div class="row" style="padding:14px 16px;margin:0 -16px;border-radius:18px;background:rgba(255,71,87,.12);border:2px dashed rgba(255,71,87,.6)"><div class="num" style="width:52px;height:52px;background:rgba(255,71,87,.2);color:var(--red)">✕</div>Your business<span style="color:var(--red);margin-left:auto;font-size:26px">not mentioned</span></div>
+  </div>
+ </div>
+
+ <div class="stamp" style="right:46px;top:670px;width:190px;height:190px;transform:rotate(12deg)">
+  <div style="font-weight:800;font-size:16px;letter-spacing:2px">ONLY</div>
+  <div class="f" style="font-size:80px;line-height:.9">2</div>
+  <div style="font-weight:800;font-size:16px;letter-spacing:2px">SPOTS LEFT</div>
+ </div>
+
+ <div style="position:absolute;left:70px;right:70px;top:1300px;text-align:center">
+  <div class="f" style="font-size:58px"><span class="wgrad">Get a </span><span class="ygrad">free AI SEO audit</span></div>
+  <div style="font-size:30px;font-weight:600;color:var(--muted);margin-top:16px">Only 2 spots left for November</div>
+ </div>
+ <div class="cta" style="left:90px;right:90px;top:1460px;height:130px;font-size:52px">Claim my spot<span class="arr"><svg width="36" height="36"><use href="#arrow"/></svg></span></div>
+ <div style="position:absolute;left:0;right:0;top:1615px;text-align:center;font-size:26px;color:#c5ccf5;font-weight:600">100% free · No obligation</div>
+</div>
+</body></html>
