@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+@font-face{font-family:G;font-weight:500;src:url(../assets/georgian-500.ttf)}
+@font-face{font-family:G;font-weight:700;src:url(../assets/georgian-700.ttf)}
+@font-face{font-family:G;font-weight:800;src:url(../assets/georgian-800.ttf)}
+@font-face{font-family:G;font-weight:900;src:url(../assets/georgian-900.ttf)}
+@font-face{font-family:L;font-weight:700;src:url(../assets/inter-700.ttf)}
+@font-face{font-family:L;font-weight:800;src:url(../assets/inter-800.ttf)}
+@font-face{font-family:L;font-weight:900;src:url(../assets/inter-900.ttf)}
+:root{--y:#F2BE48;--w:#FFFDFC;--bg:#0B0405;--red:#8E1622}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1080px;overflow:hidden;background:var(--bg)}
+body{font-family:L,G,'Noto Color Emoji',sans-serif;color:var(--w);position:relative}
+.bg{position:absolute;inset:0;background-size:cover;background-repeat:no-repeat}
+.shade{position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(11,4,5,.97) 0%,rgba(11,4,5,.88) 30%,rgba(11,4,5,.25) 62%,rgba(11,4,5,.35) 100%),
+  radial-gradient(ellipse at 50% 40%,transparent 40%,rgba(11,4,5,.6) 100%)}
+.frame{position:absolute;inset:24px;border:1.5px solid rgba(242,190,72,.32);border-radius:30px;pointer-events:none}
+.logo{position:absolute;left:58px;top:56px;display:flex;align-items:center;gap:16px}
+.logo img{width:74px;height:74px;border-radius:50%;box-shadow:0 0 0 2px rgba(242,190,72,.25)}
+.logo b{display:block;font:900 46px/1 G;letter-spacing:.5px}
+.logo i{display:block;font:800 16px/1 G;font-style:normal;color:var(--y);margin-top:6px;letter-spacing:1px}
+.pill{position:absolute;right:58px;top:66px;padding:14px 26px;border-radius:40px;background:rgba(11,4,5,.72);
+  border:1.5px solid rgba(255,255,255,.14);font:800 28px/1 L}
+.copy{position:absolute;left:66px;right:66px;bottom:200px}
+.kicker{font:800 28px/1.2 G;color:var(--y);margin-bottom:20px;letter-spacing:.3px}
+h1{font:900 82px/1.13 G;letter-spacing:-.5px;text-shadow:0 4px 30px rgba(0,0,0,.5)}
+h1 .y{color:var(--y)}
+.sub{font:700 30px/1.35 G;color:rgba(255,253,252,.82);margin-top:22px}
+.cta{position:absolute;left:66px;bottom:76px;display:flex;align-items:center;gap:30px}
+.cta span{background:var(--y);color:#1A0B05;font:800 27px/1 G;padding:26px 40px;border-radius:50px}
+.cta em{font:800 36px/1 L;font-style:normal}
+.circ{position:relative;display:inline-block;padding:0 14px}
+.circ::after{content:"";position:absolute;inset:-8px -6px -4px -6px;border:5px solid var(--y);border-radius:50%;transform:rotate(-4deg)}
+.shade{background:linear-gradient(to top,rgba(11,4,5,.98) 0%,rgba(11,4,5,.9) 36%,rgba(11,4,5,.1) 64%,rgba(11,4,5,.3) 100%)}</style></head><body><div class="bg" style="background-image:url(../assets/holding.jpg);background-position:50% 8%;background-size:1180px auto"></div>
+<div class="shade"></div><div class="logo"><img src="../assets/emblem.png"><div><b>ვირი</b><i>SEO სააგენტო</i></div></div>
+<div class="pill">🫏 viri.ge</div>
+<div class="copy"><h1 style='font-size:78px'>ბალახს ბევრი ჭამს.<br><span class='y'>ვირივით შრომა<br>ცოტას შეუძლია.</span></h1></div>
+<div class="cta"><span>1 თვე სცადე</span><em>viri.ge</em></div><div class='frame'></div></body></html>
