@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<title>Chill Friday — icity</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  :root { --ink:#111; --mute:#5b5b5b; --blue:#0070c9; --line:#e3e3e3; --soft:#f4f7fb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 210mm; height: 297mm; background:#fff; }
+  body { font-family: "Inter","Noto Sans Georgian",sans-serif; color: var(--ink); font-size: 7.6pt; line-height: 1.38; }
+  .page { width:210mm; height:297mm; padding: 8mm 9mm 6mm; display:flex; flex-direction:column; gap:2.4mm; overflow:hidden; }
+
+  header { background:#0b0b0b; color:#fff; border-radius:3mm; padding:3.4mm 4.5mm; display:flex; justify-content:space-between; align-items:flex-end; }
+  header .kicker { font-size:6.8pt; letter-spacing:.06em; color:#9fb9d6; font-weight:600; }
+  header h1 { font-family:"Inter",sans-serif; font-weight:800; font-size:22pt; letter-spacing:-.02em; line-height:1; margin-top:1mm; }
+  header h1 .pause { color:var(--blue); font-weight:800; margin-left:1.5mm; }
+  header .sub { font-size:8.6pt; margin-top:1.2mm; color:#ddd; }
+  header .meta { text-align:right; font-size:7.4pt; color:#cfcfcf; line-height:1.55; }
+  header .meta b { color:#fff; font-size:9.5pt; }
+  .tags span { display:inline-block; border:1px solid #3a3a3a; border-radius:9pt; padding:.2mm 2mm; margin-left:1mm; color:#fff; font-size:7pt; }
+
+  h2 { font-size:8.6pt; font-weight:800; display:flex; align-items:center; gap:1.6mm; margin-bottom:1.2mm; }
+  h2 .n { background:var(--blue); color:#fff; width:4.2mm; height:4.2mm; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:6.8pt; font-family:Inter; }
+  p + p { margin-top:1mm; }
+  b { font-weight:700; }
+  .mute { color:var(--mute); }
+  ul { padding-left:3.2mm; }
+  li { margin:.35mm 0; }
+  .box { border:1px solid var(--line); border-radius:2.2mm; padding:2.2mm 2.6mm; }
+  .soft { background:var(--soft); border-color:#dbe6f3; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:3mm; }
+
+  table { width:100%; border-collapse:collapse; }
+  table{table-layout:fixed} th, td { text-align:left; vertical-align:top; padding:.8mm 1.2mm; border-bottom:1px solid var(--line); }
+  th { font-size:6.6pt; color:var(--mute); font-weight:600; }
+  td.p { font-weight:700; white-space:nowrap; }
+  td.p small { display:block; font-weight:400; color:var(--mute); font-size:6.6pt; }
+  .budget td:last-child, .budget th:last-child { text-align:right; white-space:nowrap; }
+  .budget tr.total td { font-weight:800; border-bottom:none; border-top:1.5px solid var(--ink); }
+  .bar { height:1.4mm; background:var(--blue); border-radius:1mm; margin-top:.6mm; }
+  .phase { display:grid; grid-template-columns:repeat(4,1fr); gap:1.4mm; margin-top:1.6mm; }
+  .phase div { background:#fff; border:1px solid var(--line); border-radius:1.6mm; padding:1.2mm 1.5mm; font-size:6.8pt; }
+  .phase b { display:block; color:var(--blue); font-size:7pt; }
+  .stores { display:grid; grid-template-columns:repeat(3,1fr); gap:2.2mm; }
+  .stores b.t { display:block; font-size:7.8pt; margin-bottom:.6mm; }
+  .fix li{margin:.5mm 0} .fix b{color:var(--blue)}
+  footer { margin-top:auto; font-size:6.3pt; color:var(--mute); border-top:1px solid var(--line); padding-top:1.6mm; line-height:1.4; }
+  .ast { color:var(--blue); font-weight:800; }
+  .pz{display:inline-flex;gap:.6mm;vertical-align:-.3mm;margin-right:.6mm}.pz i{display:block;width:.8mm;height:2.6mm;background:var(--blue);border-radius:.3mm}
+  .pz.big{gap:1.4mm;margin-left:2.6mm;vertical-align:.2mm}.pz.big i{width:2.2mm;height:6.4mm}
+  .stores.v{grid-template-columns:1fr;gap:1.6mm}.card{background:var(--soft);border-radius:1.6mm;padding:1.6mm 2mm}
+  .cols{columns:2;column-gap:5mm}.cols li{break-inside:avoid}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div>
+    <div class="kicker">icity · Black Friday 2026 · კამპანიის გეგმა</div>
+    <h1>CHILL FRIDAY<span class="pz big"><i></i><i></i></span></h1>
+    <div class="sub">მშვიდი პარასკევი — ოფიციალური ნიშნავს სიმშვიდეს</div>
+  </div>
+  <div class="meta">
+    <b>7 დღე · 10 000₾</b><br>
+    <span class="tags"><span>#ნუიჩქარებ</span><span>#დაCHILLე</span><span>#აწონდაწონე</span></span>
+  </div>
+</header>
+
+<section class="box soft">
+  <h2><span class="n">1</span>მთავარი იდეა</h2>
+  <p>Black Friday-ზე ბაზარი ყვირის <b>„იჩქარე!“</b>: ტაიმერები, „ბოლო ცალი“, იაფი ტექნიკა საეჭვო წარმოშობითა და გარანტიით. icity, 12 წელი ბაზარზე და მხოლოდ ოფიციალური პროდუქციით, პირიქით ამბობს: <b>ნუ იჩქარებ.</b> „მშვიდი პარასკევი“ ბრენდის დაპირებას, <b>„ოფიციალური ნიშნავს სიმშვიდეს“</b>, 7-დღიან გამოცდილებად აქცევს. ირიბი მესიჯი: <b>დაბალ ფასზე ნუ წამოეგები, აწონ-დაწონე და იყიდე ერთხელ, ოფიციალურად.</b> კონკურენტს სახელით არ ვახსენებთ.</p>
+  <p><b>სიმშვიდე მექანიკით:</b> ① <b>ერთი ფასი 7 დღე</b>, ფასის თამაშების გარეშე<span class="ast">*</span> ② <b>„დაფიქრების დრო“</b>: ფასის ონლაინ ჯავშანი 48 სთ, ჯერ მოსინჯე ფილიალში<span class="ast">*</span> ③ დადასტურებული ფაქტორები: 1-წლიანი შეცვლითი გარანტია, Trade-in 500₾-მდე, განვადება 48 თვემდე, უფასო მიწოდება, ავტორიზებული სერვისი. ბოლო 2 დღე: „დაფიქრდი? 2 დღე დარჩა.“</p>
+</section>
+
+<section class="box">
+  <h2><span class="n">2</span>ვის და როგორ ვთავაზობთ</h2>
+  <table>
+    <colgroup><col style="width:18%"><col style="width:24%"><col style="width:30%"><col></colgroup>
+    <tr><th>პროდუქტი</th><th>აუდიტორია</th><th>შეთავაზება</th><th>მესიჯი და ფორმატი</th></tr>
+    <tr><td class="p">iPhone Duo<small>7 599₾-დან · 158.31₾/თვე</small></td>
+      <td>25–45, მაღალი შემოსავალი, Apple-ის მომხმარებლები და ძველი iPhone-ის მფლობელები</td>
+      <td><b>Trade-in</b> + Chill ბონუსი<span class="ast">*</span>, განვადება, შეცვლითი გარანტია. მარაგი შეზღუდულია, ამიტომ ფასდაკლების ნაცვლად <b>დემო-ჯავშანი</b></td>
+      <td>„გაშალე ფილიალში, მშვიდად.“ Reels, retargeting Trade-in-ით</td></tr>
+    <tr><td class="p">MacBook Neo<small>2 399₾-დან · 49.98₾/თვე</small></td>
+      <td>სტუდენტები 18–25, მათი მშობლები, ფრილანსერები; პირველი Mac</td>
+      <td>Chill ფასი<span class="ast">*</span> + 48-თვიანი განვადება, ძველი ლეპტოპის Trade-in<span class="ast">*</span></td>
+      <td>„სწავლისთვის ერთხელ იყიდე.“ #აწონდაწონე, თვიური გადასახადი წინ; TikTok</td></tr>
+    <tr><td class="p">Dyson Airwrap HS08<small>1 199₾ (იყო 1 799₾)</small></td>
+      <td>ქალები 22–45; საახალწლო საჩუქრის მყიდველები 25–45</td>
+      <td>−33% უკვე მოქმედებს, ამიტომ დამატებით <b>Chill Box</b> საჩუქრის შეფუთვით<span class="ast">*</span> და სტაილინგის დემო</td>
+      <td>„ორიგინალი ზრუნავს თმაზე.“ ბიუთი-ინფლუენსერი, Before/After</td></tr>
+  </table>
+</section>
+
+
+
+
+
+
+
+<div class="grid2">
+<section class="box">
+    <h2><span class="n">3</span>არხები და ბიუჯეტი</h2>
+    <table class="budget">
+      <colgroup><col><col style="width:14%"></colgroup>
+      <tr><th>არხი და როლი</th><th>₾</th></tr>
+      <tr><td><b>Meta (FB+IG):</b> Reels ცნობადობა, კონვერსია/კატალოგი, retargeting<div class="bar" style="width:100%"></div></td><td>5 000</td></tr>
+      <tr><td><b>Google</b> Search + PMax: „iPhone Duo ფასი“, „Dyson Airwrap ორიგინალი“<div class="bar" style="width:30%"></div></td><td>1 500</td></tr>
+      <tr><td><b>TikTok:</b> #დაCHILLე ვიდეო, Spark Ads, 18–30<div class="bar" style="width:30%"></div></td><td>1 500</td></tr>
+      <tr><td><b>მიკრო-ინფლუენსერები</b> (3–4: ბიუთი, სტუდენტი, ტექ)<div class="bar" style="width:24%"></div></td><td>1 200</td></tr>
+      <tr><td><b>რეზერვი:</b> მე-3 დღიდან საუკეთესო კრეატივზე<div class="bar" style="width:16%"></div></td><td>800</td></tr>
+      <tr class="total"><td>სულ</td><td>10 000</td></tr>
+    </table>
+    <p class="mute" style="margin-top:.8mm">+ უფასო: ორგანული, e-mail/SMS, საიტი, ფილიალები. პროდაქშენი ბიუჯეტს გარეთაა<span class="ast">*</span>.</p>
+    <div class="phase">
+      <div><b>−2…0</b>თიზერი</div>
+      <div><b>დღე 1–2</b>გაშვება, ვიდეო</div>
+      <div><b>დღე 3–5</b>#აწონდაწონე</div>
+      <div><b>დღე 6–7</b>„2 დღე დარჩა“</div>
+    </div>
+  </section>
+<section class="box">
+  <h2><span class="n">4</span>ფილიალები: ვიტრინა და სავაჭრო სივრცე</h2>
+  <div class="stores v">
+    <div class="card"><b class="t"><span class="pz"><i></i><i></i></span> „პაუზის“ ვიტრინა</b>შავ ვიტრინაზე ორი სინათლის ზოლი გიგანტურ პაუზის ნიშანს ქმნის, შუაში ერთი პროდუქტია. CHILL FRIDAY #ნუიჩქარებ. აქციური ხმაური არ არის, ყურადღებას მინიმალიზმი იპყრობს.</div>
+    <div class="card"><b class="t">☕ Chill Zone</b>სავარძლები, ყავა, სამივე პროდუქტი გამოსაცდელად (Duo-ს დემო, Dyson-ის სტაილინგი შაბათს). ნიშანი: „აქ არავინ გაგაჩქარებს“. კონსულტანტის ბეჯი: „#ნუიჩქარებ, მკითხე“.</div>
+    <div class="card"><b class="t">⚖️ #აწონდაწონე სასწორი + Chill Box</b>სასწორზე „ფასს“ „გარანტია · სერვისი · ორიგინალი“ გადაწონის. სალაროსთან შავი Chill Box: „გახსენი სახლში, მშვიდად.“</div>
+  </div>
+</section>
+</div>
+
+<section class="box">
+    <h2><span class="n">5</span>შედეგის შეფასება</h2>
+    <p><b>მთავარი:</b> შეკვეთები (ონლაინ + ფილიალი), შემოსავალი, ROAS, CPA, კონვერსია. <b>დამხმარე:</b> CPM, CTR, ვიდეოს 3-წამიანი შენარჩუნება, Add to Cart, ჯავშნები, Trade-in და განვადების განაცხადები, ფილიალის ვიზიტები.</p>
+    <p style="margin-top:.8mm"><b>2 დღეში შეკვეთა არ არის? ძაბრს ვამოწმებ:</b></p>
+    <ul class="fix cols">
+      <li><b>ტრეკინგი:</b> Pixel/CAPI მუშაობს? ფილიალის გაყიდვები პრომოკოდით ითვლება?</li>
+      <li><b>მაღალი CPM:</b> აუდიტორიას ვაფართოებ, ვრთავ Advantage+-ს</li>
+      <li><b>CTR &lt; 1%:</b> ახალი ჰუკი, თვიური ფასი პირველ კადრში, UGC</li>
+      <li><b>კლიკი არის, კალათა არა:</b> ლენდინგის სიჩქარე, ფასის ხილვადობა; Duo-ს ფორმის ნაცვლად Messenger</li>
+      <li><b>კალათა არის, ყიდვა არა:</b> retargeting „X₾/თვე“, ქოლ-ცენტრის ზარი</li>
+      <li><b>შეთავაზება სუსტია:</b> ფასს არ ვჭრი, ღირებულებას ვამატებ (Trade-in ბონუსი, საჩუქარი)</li>
+      <li><b>სიმშვიდე აფერხებს:</b> მე-3 დღიდან რბილი ვადა, ჯავშანი წინ</li>
+    </ul>
+  </section>
+
+<footer><b>წყარო:</b> icity.ge, 10.11.2026 (ფასები, გარანტია, Trade-in, განვადება, მიწოდება, 5 ფილიალი). <span class="ast">*</span> შეთავაზება ან დაშვება, icity-ს დასადასტურებელია: ფასდაკლების ოდენობა, ფიქსირებული ფასი, ჯავშანი, Trade-in ბონუსი, Chill Box. <b>დამატებით მჭირდება:</b> წინა Black Friday-ის შედეგები, მარჟა და სამიზნე ROAS, საშუალო ჩეკი, Pixel/CAPI-ის სტატუსი, CRM ბაზა, მარაგები. ინსპირაცია: The Ordinary „Slowvember“. ინსტრუმენტი: Claude (კვლევა, ტექსტი, დიზაინი).</footer>
+
+</div>
+</body>
+</html>
